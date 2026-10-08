@@ -1,0 +1,33 @@
+/* Penyesuaian tampilan peta Leaflet agar bersih seperti acuan desain. */
+
+.leaflet-container {
+  background: var(--primary-soft);
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Tile OSM: saturasi diturunkan sedikit, kecerahan dinaikkan. */
+.leaflet-tile-pane .bus-tile-light {
+  filter: saturate(0.82) brightness(1.06) contrast(0.98);
+}
+
+/* Mode gelap: redupkan peta tanpa menghilangkan jalan. */
+:root.dark .leaflet-tile-pane .bus-tile-light,
+:root:not(.light) .leaflet-tile-pane .bus-tile-light {
+  filter: saturate(0.55) brightness(0.62) contrast(1.05);
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--text-muted);
+}
+
+.leaflet-control-attribution a {
+  color: var(--primary);
+}
+
+/* Marker HTML kustom tidak perlu background/border bawaan Leaflet. */
+.leaflet-marker-icon.bus-marker-reset {
+  background: transparent;
+  border: none;
+}

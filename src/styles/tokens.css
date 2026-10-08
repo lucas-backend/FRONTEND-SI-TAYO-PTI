@@ -1,0 +1,88 @@
+/* Design token Pelacak Bus Unila. Nilai mengikuti docs/BRIEF.md bagian 5. */
+
+:root {
+  color-scheme: light;
+
+  --primary: #1d4ed8;
+  --primary-hover: #1a45bd;
+  --primary-soft: #eef0ff;
+  --bg: #f8f7ff;
+  --surface: #ffffff;
+  --text: #12141f;
+  --text-muted: #5b6074;
+  --success: #00702a;
+  --success-soft: #e6f3ea;
+  --danger: #8f0009;
+  --danger-soft: #fbe9ea;
+  --warning: #b26a00;
+  --warning-soft: #fdf3e3;
+  --route-2: #0f9d8a;
+  --dark: #1a1d26;
+  --border: #e7e7f2;
+
+  --radius-input: 18px;
+  --radius-card: 24px;
+  --radius-sheet: 28px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 10px 30px rgba(18, 20, 31, 0.06);
+  --shadow-card: 0 14px 40px rgba(18, 20, 31, 0.08);
+  --shadow-lg: 0 24px 60px rgba(18, 20, 31, 0.16);
+
+  --tap-target: 44px;
+  --page-pad: 20px;
+}
+
+/* Mode gelap otomatis (prefers-color-scheme) atau dipaksa manual
+   dengan class `.dark` / `.light` pada elemen <html>. */
+:root.dark {
+  color-scheme: dark;
+
+  --primary: #5b7cf5;
+  --primary-hover: #6d8bf7;
+  --primary-soft: #1e2540;
+  --bg: #0f1117;
+  --surface: #171a22;
+  --text: #f4f5fa;
+  --text-muted: #9aa0b4;
+  --success: #35b56b;
+  --success-soft: #12291d;
+  --danger: #e05a63;
+  --danger-soft: #2a1417;
+  --warning: #e0a04a;
+  --warning-soft: #2a2113;
+  --route-2: #2bc4ae;
+  --dark: #05060a;
+  --border: #2a2f3d;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+
+    --primary: #5b7cf5;
+    --primary-hover: #6d8bf7;
+    --primary-soft: #1e2540;
+    --bg: #0f1117;
+    --surface: #171a22;
+    --text: #f4f5fa;
+    --text-muted: #9aa0b4;
+    --success: #35b56b;
+    --success-soft: #12291d;
+    --danger: #e05a63;
+    --danger-soft: #2a1417;
+    --warning: #e0a04a;
+    --warning-soft: #2a2113;
+    --route-2: #2bc4ae;
+    --dark: #05060a;
+    --border: #2a2f3d;
+
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+  }
+}
