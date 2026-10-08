@@ -13,6 +13,7 @@ let started = false
 let isLeader = false
 let heartbeat: number | null = null
 let controlUnsub: (() => void) | null = null
+let fleetUnsub: (() => void) | null = null
 
 function now(): number {
   return Date.now()
@@ -89,6 +90,9 @@ function applyControl(event: BusControlEvent): void {
     case 'SIGNAL_LOSS':
       simulator.simulateSignalLoss(event.busId, event.seconds)
       break
+    case 'RESET':
+      simulator.reset()
+      break
   }
 }
 
@@ -116,13 +120,19 @@ export function startSimulation(force = false): void {
   if (started) return
   started = true
   const store = useSimStore.getState()
-  void store.load()
+  void store.load().then(() => {
+    // Terapkan armada tersimpan (hasil CRUD admin) ke mesin simulasi.
+    simulator.syncFleet(useSimStore.getState().buses)
+  })
   store.bind()
   const leader = force ? (forceLeadership(), true) : claimLeadership()
   if (leader && !simulator.isRunning()) simulator.start()
   controlUnsub = gateway.subscribe('bus:control', (event) => {
     if (!simulator.isRunning()) return
     applyControl(event)
+  })
+  fleetUnsub = gateway.subscribe('fleet:changed', (event) => {
+    simulator.syncFleet(event.buses)
   })
   startHeartbeat()
 }
@@ -131,6 +141,8 @@ export function stopSimulation(): void {
   simulator.stop()
   controlUnsub?.()
   controlUnsub = null
+  fleetUnsub?.()
+  fleetUnsub = null
   // Lepas kepemimpinan agar tab lain bisa mengambil alih dan agar efek
   // StrictMode (mount-unmount-mount) dapat mengklaim ulang pada mount berikutnya.
   releaseLeadership()

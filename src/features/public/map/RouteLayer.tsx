@@ -3,7 +3,8 @@ import { Polyline } from 'react-leaflet'
 import { useRoutes } from '@/hooks/useSimulation'
 
 interface RouteLayerProps {
-  activeRouteId: string
+  /** `null` berarti semua rute ditampilkan aktif (dipakai Monitor admin). */
+  activeRouteId: string | null
 }
 
 /** Layer rute statis. Dipisah dari layer bus agar tidak ikut render tiap tick. */
@@ -12,7 +13,7 @@ export const RouteLayer = memo(function RouteLayer({ activeRouteId }: RouteLayer
   return (
     <>
       {routes.map((route) => {
-        const active = route.id === activeRouteId
+        const active = activeRouteId === null || route.id === activeRouteId
         return (
           <Polyline
             key={route.id}

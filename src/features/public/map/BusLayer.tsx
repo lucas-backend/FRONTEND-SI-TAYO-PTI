@@ -5,10 +5,12 @@ import { BusMarker } from './BusMarker'
 interface BusLayerProps {
   selectedBusId: string | null
   onSelectBus: (busId: string) => void
+  /** Bila diisi, hanya bus pada jalur ini yang ditampilkan (filter admin). */
+  routeId?: string | null
 }
 
 /** Layer bus dinamis: satu marker per bus yang sedang beroperasi. */
-export function BusLayer({ selectedBusId, onSelectBus }: BusLayerProps) {
+export function BusLayer({ selectedBusId, onSelectBus, routeId = null }: BusLayerProps) {
   const positions = usePositions()
   const buses = useBuses()
   const routes = useRoutes()
@@ -23,6 +25,7 @@ export function BusLayer({ selectedBusId, onSelectBus }: BusLayerProps) {
         const bus = busMap.get(position.busId)
         const route = bus ? routeMap.get(bus.routeId) : undefined
         if (!bus || !route) return null
+        if (routeId && bus.routeId !== routeId) return null
         const signal = signals[position.busId]
         return (
           <BusMarker

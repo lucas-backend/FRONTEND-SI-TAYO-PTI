@@ -40,6 +40,8 @@ export interface Bus {
   seatsTaken: number
   capacityStatus: CapacityStatus
   status: BusStatus
+  /** Terdaftar & diizinkan beroperasi (toggle aktif/nonaktif admin). */
+  active: boolean
 }
 
 export interface BusPosition {
@@ -59,12 +61,35 @@ export interface User {
   username: string
   role: UserRole
   active: boolean
+  /** Timestamp login terakhir (mock, diisi klien API saat login sukses). */
+  lastLoginAt?: number
 }
 
 export interface AuthSession {
   token: string
   role: UserRole
   user: User
+}
+
+export interface BusInput {
+  plate: string
+  label: string
+  routeId: string
+  driverId: string
+  capacity: number
+  active: boolean
+}
+
+export interface UserInput {
+  name: string
+  username: string
+  role: UserRole
+  active: boolean
+}
+
+export interface PinResetResult {
+  user: User
+  pin: string
 }
 
 export interface CapacityPatch {

@@ -1,16 +1,21 @@
 import type {
   AuthSession,
   Bus,
+  BusInput,
   BusPosition,
   CapacityStatus,
   LoginInput,
+  PinResetResult,
   Route,
   Stop,
   TrackingLocationInput,
   User,
+  UserInput,
 } from './types'
-import { BUSES, ROUTES, STOPS, USERS } from '@/mock/data'
+import { ROUTES, STOPS } from '@/mock/data'
 import { simulator } from '@/mock/simulator/instance'
+import * as db from '@/mock/db'
+import { broadcastControl, publish } from '@/realtime'
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -28,9 +33,13 @@ function fakeJwt(payload: Record<string, string>): string {
   return `${encode(header)}.${encode(payload)}.mock-signature`
 }
 
-function expectedPin(user: User): string {
-  if (user.role === 'DRIVER') return '123456'
-  return user.username === 'superadmin' ? 'super123' : 'admin123'
+const CONTROL_ORIGIN = 'admin-api'
+
+/** Siarkan daftar armada terbaru ke semua tab (peta publik ikut berubah). */
+function publishFleet(): Bus[] {
+  const buses = db.listBuses()
+  publish('fleet:changed', { buses })
+  return buses
 }
 
 /**
@@ -40,13 +49,14 @@ function expectedPin(user: User): string {
 export const api = {
   async login(input: LoginInput): Promise<AuthSession> {
     await delay(340)
-    const user = USERS.find((item) => item.username === input.username && item.active)
-    if (!user) throw new Error('ID pengemudi / username tidak ditemukan')
-    if (input.pin !== expectedPin(user)) throw new Error('PIN atau kata sandi salah')
+    const user = db.findUser(input.username)
+    if (!user || !user.active) throw new Error('Nama pengguna tidak ditemukan atau nonaktif')
+    if (!db.verifyPin(user, input.pin)) throw new Error('PIN atau kata sandi salah')
+    const updated = db.recordLogin(user.id) ?? user
     return {
-      token: fakeJwt({ sub: user.id, role: user.role, name: user.name }),
-      role: user.role,
-      user: { ...user },
+      token: fakeJwt({ sub: updated.id, role: updated.role, name: updated.name }),
+      role: updated.role,
+      user: { ...updated },
     }
   },
 
@@ -62,12 +72,68 @@ export const api = {
 
   async getBuses(): Promise<Bus[]> {
     await delay(120)
-    return clone(BUSES)
+    return db.listBuses()
   },
 
   async getUsers(): Promise<User[]> {
     await delay(120)
-    return clone(USERS)
+    return db.listUsers()
+  },
+
+  async createBus(input: BusInput): Promise<Bus> {
+    await delay(220)
+    const bus = db.createBus(input)
+    publishFleet()
+    return bus
+  },
+
+  async updateBus(id: string, input: BusInput): Promise<Bus> {
+    await delay(220)
+    const bus = db.updateBus(id, input)
+    if (!bus) throw new Error('Bus tidak ditemukan')
+    publishFleet()
+    return bus
+  },
+
+  async deleteBus(id: string): Promise<void> {
+    await delay(200)
+    db.deleteBus(id)
+    publishFleet()
+  },
+
+  async setBusActive(id: string, active: boolean): Promise<Bus> {
+    await delay(160)
+    const bus = db.setBusActive(id, active)
+    if (!bus) throw new Error('Bus tidak ditemukan')
+    publishFleet()
+    return bus
+  },
+
+  async createUser(input: UserInput): Promise<PinResetResult> {
+    await delay(220)
+    const { user, pin } = db.createUser(input)
+    return { user, pin }
+  },
+
+  async updateUser(id: string, input: UserInput): Promise<User> {
+    await delay(220)
+    const user = db.updateUser(id, input)
+    if (!user) throw new Error('Akun tidak ditemukan')
+    return user
+  },
+
+  async setUserActive(id: string, active: boolean): Promise<User> {
+    await delay(160)
+    const user = db.setUserActive(id, active)
+    if (!user) throw new Error('Akun tidak ditemukan')
+    return user
+  },
+
+  async resetUserPin(id: string): Promise<PinResetResult> {
+    await delay(180)
+    const result = db.resetUserPin(id)
+    if (!result) throw new Error('Akun tidak ditemukan')
+    return result
   },
 
   async getBusEta(busId: string, stopId: string): Promise<number | null> {
@@ -108,7 +174,10 @@ export const api = {
 
   async resetDemo(): Promise<void> {
     await delay(160)
+    const { buses } = db.resetDemoData()
+    broadcastControl({ origin: CONTROL_ORIGIN, action: 'RESET', busId: '', ts: Date.now() })
     simulator.reset()
+    publish('fleet:changed', { buses })
   },
 
   getGatewayPositions(): BusPosition[] {

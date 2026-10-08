@@ -4,7 +4,7 @@ Mockup frontend interaktif Sistem Pelacak Bus Universitas Lampung (web publik,
 web admin, simulator supir). Spesifikasi lengkap: `docs/BRIEF.md`. Acuan visual:
 `docs/design/`.
 
-Status saat ini: **Tahap 1–7** dari urutan BRIEF bagian 16 sudah selesai.
+Status saat ini: **Tahap 1–7 dan 8A** dari urutan BRIEF bagian 16 sudah selesai.
 
 | Tahap | Isi | Status |
 | --- | --- | --- |
@@ -15,7 +15,10 @@ Status saat ini: **Tahap 1–7** dari urutan BRIEF bagian 16 sudah selesai.
 | 5 | Bottom sheet detail bus (ETA countdown, daftar halte), tab Jadwal/Armada/Civitas, state loading/kosong/galat | Selesai |
 | 6 | Posisi pengguna + ETA personal (Lokasi Saya, Posisi Simulasi, bus tercepat, notifikasi mock) | Selesai |
 | 7 | Simulator supir (`/driver`), sinyal putus, mode demo satu tab (`/demo`) | Selesai |
-| 8–10 | Admin, panel demo, QA | Belum |
+| 8A | Fondasi admin: auth + guard, layout, dashboard, monitor, CRUD armada & akun, persistensi demo | Selesai |
+| 8B | Editor rute & halte interaktif | Belum |
+| 9 | Panel demo, tur, polesan responsif & mode gelap | Belum |
+| 10 | QA terhadap checklist, README | Belum |
 
 ## Menjalankan
 
@@ -35,7 +38,9 @@ Halaman publik:
 - `/driver` — **Simulator Supir**: bingkai ponsel (Login → Panel Standby → Panel Tracking).
 - `/demo` — **Mode Demo**: simulator supir di kiri + peta publik di kanan dalam satu tab.
 - `/dev` — Lab Pengembangan (token, komponen, monitor simulasi + Reset Data Demo).
-- `/admin/*` — placeholder tahap 8.
+- `/admin/login` — Login admin (demo: `admin` / `admin123`).
+- `/admin/dashboard`, `/admin/monitor`, `/admin/armada`, `/admin/rute-halte`, `/admin/akun`
+  — Web Admin (dilindungi guard role ADMIN).
 
 ## Teknologi
 
@@ -145,19 +150,60 @@ mengimpor `src/mock` secara langsung; data masuk lewat store yang berlangganan
   sebagai cadangan, termasuk perintah kontrol `bus:control` yang diterapkan pada
   tab penggerak.
 
+## Web Admin (Tahap 8A)
+
+- Route `/admin/*` dilindungi `RequireAdmin` (guard role `ADMIN`). Sesi admin
+  disimpan terpisah di `localStorage` (`bus-unila:admin-session`), berbeda dari
+  sesi supir (`bus-unila:driver-session`). Akun supir tidak bisa masuk `/admin`
+  dan sebaliknya. Login demo `admin` / `admin123` (catatan kecil tampil bila
+  `VITE_DEMO_MODE=true`).
+- Layout: sidebar kiri (Dashboard, Monitor Langsung, Armada, Rute & Halte, Akun)
+  + topbar (pencarian, notifikasi, avatar, toggle tema terang/gelap). Di bawah
+  breakpoint `lg` sidebar menjadi drawer (tablet 768px). Gaya visual mengikuti
+  token warna publik.
+- **Dashboard** (`/admin/dashboard`): kartu statistik (bus aktif/total,
+  rata-rata kecepatan, penumpang saat ini, uptime dummy 99,2%, latensi data
+  rata-rata dari selisih `Date.now() - event.ts`), grafik Recharts deterministik
+  (penumpang per jam, perjalanan per hari), dan **Aktivitas Terbaru** yang
+  diisi dari event nyata (`bus:started`, kapasitas penuh, `bus:signal` putus,
+  `bus:stopped`).
+- **Monitor Langsung** (`/admin/monitor`): peta semua bus, filter jalur,
+  poligon geofence kampus (convex hull geometri rute, transparan), panel kanan
+  daftar bus (status, kecepatan, sinyal terakhir, kapasitas). Klik bus:
+  detail + jejak 5 menit terakhir (polyline tipis).
+- **Kelola Armada** (`/admin/armada`): TanStack Table v9 (cari, filter jalur,
+  urutkan, paginasi), drawer tambah/ubah (React Hook Form + Zod: plat `BE 1234 XX`,
+  kapasitas 1-60, jalur & supir wajib), hapus dengan dialog konfirmasi, toggle
+  aktif/nonaktif. Semua lewat `api/client` (mock), bukan mengubah data seed.
+- **Kelola Akun** (`/admin/akun`): tabel akun supir/admin, tambah/ubah, reset PIN
+  (PIN acak ditampilkan sekali), nonaktifkan. Supir nonaktif gagal login di
+  `/driver`.
+- **Persistensi demo**: hasil CRUD disimpan pada satu key `localStorage`
+  ber-versi (`bus-unila:demo-data:v1`) melalui `src/mock/db.ts`. Tombol **Reset
+  Data Demo** (sidebar admin & `/dev`) menghapus key tersebut dan mengembalikan
+  armada ke seed. Perubahan armada disiarkan lewat channel realtime
+  `fleet:changed` sehingga peta publik di tab lain (`BroadcastChannel`) atau di
+  `/demo` ikut berubah: bus baru muncul, bus nonaktif hilang, kapasitas berubah.
+- **Rute & Halte** (`/admin/rute-halte`) masih placeholder "Segera hadir"
+  (editor dikerjakan pada tahap 8B).
+- Setiap tabel punya state loading (skeleton), kosong, dan galat.
+
 ## Verifikasi (Playwright)
 
 Screenshot & skenario demo diuji dengan Playwright (Chromium) pada viewport
-persis **390x844** dan **1280x800**:
+persis **390x844**, **1280x800**, dan **768x1024**:
 
 ```bash
 npx playwright test
 ```
 
 Hasil tersimpan di `docs/screenshots/` (mis. `driver-1-login-390x844.png`,
-`demo-5-penuh-1280x800.png`, `demo-6-sinyal-putus-1280x800.png`). Skenario
-BRIEF bagian 14 butir 4–6 (ETA personal, START TRACKING + Penuh, sinyal putus &
-pemulihan) otomatis diverifikasi oleh `e2e/scenarios.spec.ts`.
+`demo-5-penuh-1280x800.png`, `admin-dashboard-1280x800.png`,
+`admin-monitor-768x1024.png`). Skenario BRIEF bagian 14 butir 4–6 (ETA personal,
+START TRACKING + Penuh, sinyal putus & pemulihan) otomatis diverifikasi oleh
+`e2e/scenarios.spec.ts`. Alur admin (login -> tambah bus muncul di `/demo` ->
+nonaktifkan -> bus hilang) dan screenshot seluruh halaman admin pada 1280x800
+dan 768x1024 diverifikasi oleh `e2e/admin.spec.ts`.
 
 ## Kredensial Demo
 
@@ -225,8 +271,8 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 
 ## Asumsi
 
-1. **Tahap** — yang dikerjakan tahap 1–7. Admin (8), panel demo (9), dan QA (10)
-   belum.
+1. **Tahap** — yang dikerjakan tahap 1–7 dan 8A (fondasi admin). Editor rute &
+   halte (8B), panel demo (9), dan QA (10) belum.
 2. **Koordinat** — titik halte asli diverifikasi lewat OpenStreetMap/Nominatim, lalu
    **diproyeksikan ke garis rute** (`turf.nearestPointOnLine`) sehingga marker halte
    tepat di atas rute. Jarak koreksi > 25 m dilaporkan di `mock/data/stops.ts`
@@ -242,10 +288,11 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
    Perintah supir (`bus:control`) disiarkan agar tab leader ikut menerapkan.
 6. **Posisi penggerak** — pada mode mock posisi bus digerakkan mesin simulasi, bukan
    GPS asli; endpoint `/tracking/location` hanya mengembalikan posisi saat ini.
-7. **Penyimpanan** — belum ada persistensi CRUD admin; tombol Reset Data Demo
-   membangun ulang runtime dari data dummy. Sesi login supir disimpan di
-   `localStorage` (persistensi demo), sedangkan posisi pengguna & pengingat hanya
-   di memori (tidak dipersistensi).
+7. **Penyimpanan** — hasil CRUD admin (bus, akun, PIN) dipersistensi pada satu
+   key `localStorage` ber-versi `bus-unila:demo-data:v1` (`src/mock/db.ts`); tombol
+   Reset Data Demo menghapus key tersebut dan kembali ke seed. Sesi login supir
+   dan admin disimpan di `localStorage` (key terpisah), sedangkan posisi pengguna,
+   pengingat, jejak bus, aktivitas, dan latensi hanya di memori.
 8. **Gateway WebSocket** — `wsGateway` masih stub (throw) sampai backend tersedia.
 9. **Detail bus** — daftar halte ditampilkan lengkap per rute (tidak dikelompokkan
    seperti contoh "FMIPA • GSG" pada gambar) agar status Lewat/Berikutnya/+mnt jelas.
@@ -269,3 +316,31 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 16. **Playwright sebagai devDependency** — ditambahkan khusus untuk verifikasi
     screenshot/skenario (diminta pada instruksi tahap 7). Tidak memengaruhi runtime
     aplikasi. Perintah: `npx playwright test`.
+17. **Field `active` pada `Bus`** — ditambahkan agar toggle aktif/nonaktif admin
+    terpisah dari status live (`ACTIVE`/`STANDBY`/`OFFLINE`). Bus nonaktif
+    dikeluarkan dari mesin simulasi sehingga marker-nya hilang di peta publik.
+18. **Sesi admin terpisah** — key `localStorage` berbeda dari sesi supir; akun
+    role `DRIVER` ditolak saat login di `/admin`.
+19. **Geofence kampus** — poligon transparan di Monitor admin dihitung sebagai
+    *convex hull* titik geometri rute (bukan batas administratif resmi kampus).
+20. **Jejak bus** — disimpan di memori `useSimStore` dengan jendela 5 menit dan
+    batas 200 titik per bus (hanya untuk tampilan Monitor).
+21. **Data dashboard** — grafik penumpang/jam & perjalanan/hari memakai data
+    dummy deterministik (fungsi tersegel, bukan `Math.random`); uptime 99,2%
+    dummy. Latensi data dihitung nyata dari selisih `Date.now()` dengan timestamp
+    event `bus:position` (jitter simulasi 0–1,5 dtk).
+22. **PIN akun** — disimpan di mock db (`src/mock/db.ts`), seed dari kredensial
+    demo. Tambah akun & reset PIN menghasilkan PIN acak 6 digit yang ditampilkan
+    sekali saja.
+23. **Tema admin** — toggle menulis kelas `.dark`/`.light` pada `<html>` dan
+    `localStorage` (`bus-unila:theme`); berlaku global saat berpindah halaman.
+24. **TanStack Table v9** — memakai API `useTable` + `tableFeatures` (bukan
+    `useReactTable` v8) sesuai versi yang terpasang.
+25. **Channel `fleet:changed`** — channel realtime baru untuk menyiarkan daftar
+    armada ke seluruh tab saat CRUD admin; mesin simulasi di tab leader ikut
+    menyinkronkan runtime lewat channel ini.
+26. **Anomali data halte** — pada satu titik saat pengerjaan, `mock/data/stops.ts`
+    sempat berubah di luar perubahan tahap 8A (id `tj-*`) sementara
+    `mock/data/routes.ts` belum disesuaikan, sehingga pemetaan rute↔halte kosong.
+    File dikembalikan ke versi HEAD (konsisten) agar fitur tetap berjalan; editor
+    rute/halte (8B) belum dikerjakan.

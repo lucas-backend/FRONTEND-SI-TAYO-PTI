@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useSimStore } from '@/store/useSimStore'
+import type { ActivityItem, TrailPoint } from '@/store/useSimStore'
 import type { Bus, Route, Stop } from '@/api/types'
 import type { BusSignalEvent } from '@/realtime'
 
@@ -51,6 +52,18 @@ export function useLoadSim(): () => Promise<void> {
 export function useStopMap(): Map<string, Stop> {
   const stops = useStops()
   return useMemo(() => new Map(stops.map((stop) => [stop.id, stop])), [stops])
+}
+
+export function useActivities(): ActivityItem[] {
+  return useSimStore((state) => state.activities)
+}
+
+export function useLatencies(): number[] {
+  return useSimStore((state) => state.latencies)
+}
+
+export function useTrails(): Record<string, TrailPoint[]> {
+  return useSimStore((state) => state.trails)
 }
 
 export function useRouteMap(): Map<string, Route> {

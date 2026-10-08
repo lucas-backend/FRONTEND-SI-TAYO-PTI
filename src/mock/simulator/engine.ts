@@ -84,6 +84,11 @@ export class SimulationEngine {
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.onVisibilityChange)
     }
+    // Catat bus yang sudah aktif saat mesin dinyalakan (mengisi feed aktivitas).
+    const now = Date.now()
+    for (const runtime of this.runtimes) {
+      if (runtime.active) publish('bus:started', { busId: runtime.bus.id, ts: now })
+    }
   }
 
   stop(): void {
@@ -111,20 +116,48 @@ export class SimulationEngine {
     return this.paused
   }
 
+  /**
+   * Bangun ulang runtime dari `this.buses`. Runtime bus yang masih ada dan
+   * masih memakai jalur sama dipertahankan (posisi tidak melompat); bus yang
+   * hilang/nonaktif dihentikan dengan event `bus:stopped`.
+   */
   private rebuildRuntimes(): void {
-    this.runtimes = []
-    const totalByRoute = new Map<string, number>()
-    const indexByRoute = new Map<string, number>()
+    const previous = new Map(this.runtimes.map((runtime) => [runtime.bus.id, runtime]))
+    const routeCounts = new Map<string, number>()
     for (const bus of this.buses) {
+      if (bus.active === false) continue
+      if (!this.routes.some((route) => route.id === bus.routeId)) continue
+      routeCounts.set(bus.routeId, (routeCounts.get(bus.routeId) ?? 0) + 1)
+    }
+
+    const indexByRoute = new Map<string, number>()
+    const next: BusRuntime[] = []
+    for (const bus of this.buses) {
+      if (bus.active === false) continue
       const route = this.routes.find((item) => item.id === bus.routeId)
       if (!route) continue
-      const count = this.buses.filter((item) => item.routeId === bus.routeId && this.routes.some((r) => r.id === item.routeId)).length
-      totalByRoute.set(bus.routeId, count)
       const index = indexByRoute.get(bus.routeId) ?? 0
       indexByRoute.set(bus.routeId, index + 1)
-      const runtime = this.createRuntime(bus, route, index, totalByRoute.get(bus.routeId) ?? 1)
-      if (runtime) this.runtimes.push(runtime)
+      const count = routeCounts.get(bus.routeId) ?? 1
+
+      const existing = previous.get(bus.id)
+      if (existing && existing.route.id === bus.routeId) {
+        existing.bus.plate = bus.plate
+        existing.bus.label = bus.label
+        existing.bus.driverId = bus.driverId
+        existing.bus.capacity = bus.capacity
+        existing.bus.seatsTaken = Math.min(existing.bus.seatsTaken, bus.capacity)
+        next.push(existing)
+        continue
+      }
+      const runtime = this.createRuntime(bus, route, index, count)
+      if (runtime) next.push(runtime)
     }
+
+    for (const runtime of this.runtimes) {
+      if (!next.includes(runtime)) publish('bus:stopped', { busId: runtime.bus.id, ts: Date.now() })
+    }
+    this.runtimes = next
   }
 
   private createRuntime(bus: Bus, route: Route, indexOnRoute: number, countOnRoute: number): BusRuntime | null {
@@ -158,7 +191,7 @@ export class SimulationEngine {
       dwellRemainingS: 0,
       heading: bearingAtDistance(path, distanceKm),
       nextStopIndex: findNextStopIndex(distanceKm, stops, totalKm),
-      active: bus.status === 'ACTIVE',
+      active: bus.active !== false && bus.status === 'ACTIVE',
       forcedFull: bus.capacityStatus === 'FULL',
       offlineUntilTs: 0,
       geofenceExitUntilTs: 0,
@@ -374,9 +407,20 @@ export class SimulationEngine {
     this.rebuildRuntimes()
   }
 
+  /** Ganti seluruh armada (dipakai CRUD admin & sinkronisasi antar tab). */
+  syncFleet(buses: readonly Bus[]): void {
+    this.buses.splice(0, this.buses.length, ...buses.map((bus) => ({ ...bus })))
+    this.rebuildRuntimes()
+  }
+
   removeBus(busId: string): void {
     publish('bus:stopped', { busId, ts: Date.now() })
     this.runtimes = this.runtimes.filter((item) => item.bus.id !== busId)
+    this.buses.splice(
+      0,
+      this.buses.length,
+      ...this.buses.filter((bus) => bus.id !== busId),
+    )
   }
 
   getPosition(busId: string): BusPosition | null {
@@ -411,6 +455,8 @@ export class SimulationEngine {
   }
 
   reset(): void {
+    // Selalu kembali ke data seed, bukan armada hasil CRUD admin.
+    this.buses.splice(0, this.buses.length, ...BUSES.map((bus) => ({ ...bus })))
     this.runtimes = []
     this.paused = false
     this.speedMultiplier = SIM.DEFAULT_SPEED_MULTIPLIER

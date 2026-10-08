@@ -12,6 +12,7 @@ export const BUSES: Bus[] = [
     seatsTaken: 14,
     capacityStatus: 'AVAILABLE',
     status: 'ACTIVE',
+    active: true,
   },
   {
     id: 'bus-02',
@@ -23,6 +24,7 @@ export const BUSES: Bus[] = [
     seatsTaken: 20,
     capacityStatus: 'AVAILABLE',
     status: 'ACTIVE',
+    active: true,
   },
   {
     id: 'bus-03',
@@ -34,6 +36,7 @@ export const BUSES: Bus[] = [
     seatsTaken: 0,
     capacityStatus: 'AVAILABLE',
     status: 'STANDBY',
+    active: true,
   },
 ]
 

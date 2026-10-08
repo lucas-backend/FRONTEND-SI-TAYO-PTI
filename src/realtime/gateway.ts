@@ -8,6 +8,7 @@ export type RealtimeChannel =
   | 'bus:stopped'
   | 'bus:signal'
   | 'bus:control'
+  | 'fleet:changed'
   | 'gateway:status'
 
 export interface BusCapacityEvent {
@@ -36,7 +37,7 @@ export interface BusSignalEvent {
   ts: number
 }
 
-export type BusControlAction = 'START' | 'STOP' | 'CAPACITY' | 'SIGNAL_LOSS'
+export type BusControlAction = 'START' | 'STOP' | 'CAPACITY' | 'SIGNAL_LOSS' | 'RESET'
 
 /** Perintah kontrol dari simulator supir yang disiarkan ke tab leader. */
 export interface BusControlEvent {
@@ -53,6 +54,11 @@ export interface GatewayStatusEvent {
   ts: number
 }
 
+/** Daftar armada berubah (CRUD admin). Dipancarkan ke semua tab. */
+export interface FleetChangedEvent {
+  buses: Bus[]
+}
+
 export interface RealtimeEventMap {
   'bus:position': BusPosition
   'bus:capacity': BusCapacityEvent
@@ -60,6 +66,7 @@ export interface RealtimeEventMap {
   'bus:stopped': BusLifecycleEvent
   'bus:signal': BusSignalEvent
   'bus:control': BusControlEvent
+  'fleet:changed': FleetChangedEvent
   'gateway:status': GatewayStatusEvent
 }
 

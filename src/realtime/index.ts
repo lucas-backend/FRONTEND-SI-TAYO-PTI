@@ -19,4 +19,5 @@ export type {
   BusControlEvent,
   BusControlAction,
   GatewayStatusEvent,
+  FleetChangedEvent,
 } from './gateway'
