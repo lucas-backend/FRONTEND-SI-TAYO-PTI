@@ -11,11 +11,13 @@ export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/ap
 export const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/ws'
 
 // Konstanta mesin simulasi (interval tick, kecepatan, dwell).
+// Kecepatan 10-16 km/jam (rata-rata ~13) dipilih agar satu putaran Jalur 1
+// (~2,54 km, 6 halte) memakan ~14 menit sesuai target 12-18 menit.
 export const SIM = {
   TICK_MS: 3000,
   JITTER_MAX_MS: 1500,
-  SPEED_MIN_KMH: 18,
-  SPEED_MAX_KMH: 32,
+  SPEED_MIN_KMH: 10,
+  SPEED_MAX_KMH: 16,
   SPEED_STEP_KMH: 2.5,
   SLOWDOWN_KM: 0.09,
   DWELL_MIN_S: 15,

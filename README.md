@@ -118,32 +118,50 @@ Realtime (`src/realtime/gateway.ts`): event `bus:position`, `bus:capacity`,
 ## Mesin Simulasi
 
 `mock/simulator/engine.ts` berjalan sejak aplikasi dibuka (lewat `app/bootstrap.ts`
-→ `runner.ts`): posisi sepanjang polyline (`turf.along`), kecepatan acak 18–32 km/jam
-dengan perlambatan menjelang halte, dwell 15–30 detik, `tick` 3 detik + jitter 0–1,5
-detik, heading dari `turf.bearing`, dan ETA ke semua halte. Skenario yang sudah ada:
-sinyal putus (antrean offline + flush batch), keluar geofence (koordinat diabaikan
-store), toggle Penuh, add/remove/reset bus, pengali kecepatan, dan pause.
+→ `runner.ts`): posisi sepanjang polyline (`turf.along`), kecepatan acak 10–16 km/jam
+(dipilih agar satu putaran Jalur 1 ~14 menit) dengan perlambatan menjelang halte,
+dwell 15–30 detik, `tick` 3 detik + jitter 0–1,5 detik, heading dari `turf.bearing`,
+dan ETA ke semua halte. Skenario yang sudah ada: sinyal putus (antrean offline +
+flush batch), keluar geofence (koordinat diabaikan store), toggle Penuh,
+add/remove/reset bus, pengali kecepatan, dan pause.
+
+## Data Rute (hasil tracing)
+
+Path rute diambil dari `docs/data/jalur1.geojson` & `jalur2.geojson` (GeoJSON
+`[lng, lat]` → diubah ke `[lat, lng]`), titik duplikat dihapus, loop ditutup.
+Jumlah titik < 1500 sehingga tidak disederhanakan.
+
+| Rute | Titik | Panjang | Halte (arah putaran) | Satu putaran |
+| --- | --- | --- | --- | --- |
+| J1 Lingkar Luar | 67 | 2,537 km | pertanian → gsg → rektorat → fk → mipa → bundaran | ~14,5 menit |
+| J2 Lingkar Dalam | 73 | 1,819 km | perpus → rektorat | ~9 menit |
+
+Setiap halte diproyeksikan ke garis rute dengan `turf.nearestPointOnLine`; koordinat
+halte di `mock/data/stops.ts` digeser ke titik terdekat di rute (marker tepat di atas
+garis). **Peringatan jarak koreksi > 25 m:** FK 456 m, Perpus 352 m, Bundaran 156 m,
+MIPA 103 m, Pertanian 87 m, GSG 62 m, Rektorat 44 m. Artinya rute hasil tracing belum
+menjangkau gedung FK/Perpus; perlu tracing ulang atau penyesuaian titik halte.
 
 ### Uji mesin di konsol
 
 Uji dilakukan dengan memuat modul engine asli lewat Vite SSR lalu menjalankan
-`tickOnce()` (dipakai untuk menembak waktu simulasi tanpa menunggu timer). Hasil:
-rute J1 = 133 titik / 3,483 km, J2 = 97 titik / 0,882 km; 800 event `bus:position`
-dan 24 event `bus:capacity` tanpa galat; antrean offline 4 titik ter-flush saat
-sinyal pulih; lifecycle `bus:started`/`bus:stopped` dan geofence berjalan benar.
-Tab *Simulasi* di `/dev` juga mencetak `console.table` posisi bus tiap 3 detik.
+`tickOnce()`. Hasil pada geometri baru: J1 = 67 titik / 2,537 km, J2 = 73 titik /
+1,819 km; proyeksi halte ke rute ~0 m; satu putaran J1 ~14,5 menit (target 12–18);
+ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
+`console.table` posisi bus tiap 3 detik.
 
 ## Asumsi
 
 1. **Tahap** — yang dikerjakan tahap 1–5. ETA personal/"Lokasi Saya" (tahap 6),
    simulator supir (7), admin (8), panel demo (9), dan QA (10) belum.
-2. **Koordinat** — titik halte Rujukan (Rektorat, Perpustakaan, FMIPA, FK, Pertanian)
-   diverifikasi lewat OpenStreetMap/Nominatim. Halte **GSG** dan **Bundaran** belum
-   punya node resmi di OSM sehingga masih perkiraan dan ditandai `TODO: verifikasi
-   lapangan` di `mock/data/stops.ts`.
-3. **Geometri rute** — path dibentuk dari titik kontrol + spline Catmull-Rom tertutup
-   (halus, bukan garis lurus). Belum hasil tracing jalan penuh di OSM; ditandai TODO
-   di `mock/data/routes.ts`.
+2. **Koordinat** — titik halte asli diverifikasi lewat OpenStreetMap/Nominatim, lalu
+   **diproyeksikan ke garis rute** (`turf.nearestPointOnLine`) sehingga marker halte
+   tepat di atas rute. Jarak koreksi > 25 m dilaporkan di `mock/data/stops.ts`
+   (terbesar: FK 456 m, Perpus 352 m); hal ini karena rute tracing belum menjangkau
+   kedua gedung tersebut.
+3. **Geometri rute** — memakai hasil tracing `docs/data/jalur*.geojson` apa adanya
+   (bukan lagi spline Catmull-Rom). Titik duplikat berurutan dihapus, loop ditutup,
+   dan panjang/ETA dihitung ulang dari geometri tersebut.
 4. **React 19** — mengikuti scaffold bawaan (BRIEF menyebut React 18).
 5. **Sinkronisasi antar tab** — engine hanya berjalan di tab "leader" (dipilih via
    heartbeat `localStorage` + id tab `sessionStorage`, sehingga reload tab yang sama

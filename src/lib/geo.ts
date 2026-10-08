@@ -82,34 +82,3 @@ export function projectStopsOnRoute(path: readonly LatLng[], stops: readonly { i
     })
     .sort((a, b) => a.distanceKm - b.distanceKm)
 }
-
-function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number): number {
-  const t2 = t * t
-  const t3 = t2 * t
-  return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
-}
-
-/**
- * Spline Catmull-Rom tertutup untuk membentuk geometri rute halus (loop)
- * dari titik kontrol. Dipakai agar rute tidak terbentuk dari garis lurus kasar.
- */
-export function closedSpline(points: readonly LatLng[], samplesPerSegment = 12): LatLng[] {
-  const n = points.length
-  if (n < 3) return points.map((p) => [p[0], p[1]] as LatLng)
-  const out: LatLng[] = []
-  for (let i = 0; i < n; i += 1) {
-    const p0 = points[(i - 1 + n) % n]
-    const p1 = points[i]
-    const p2 = points[(i + 1) % n]
-    const p3 = points[(i + 2) % n]
-    for (let s = 0; s < samplesPerSegment; s += 1) {
-      const t = s / samplesPerSegment
-      out.push([
-        catmullRom(p0[0], p1[0], p2[0], p3[0], t),
-        catmullRom(p0[1], p1[1], p2[1], p3[1], t),
-      ])
-    }
-  }
-  out.push([out[0][0], out[0][1]])
-  return out
-}
