@@ -11,9 +11,14 @@
 }
 
 /* Mode gelap: redupkan peta tanpa menghilangkan jalan. */
-:root.dark .leaflet-tile-pane .bus-tile-light,
-:root:not(.light) .leaflet-tile-pane .bus-tile-light {
-  filter: saturate(0.55) brightness(0.62) contrast(1.05);
+:root.dark .leaflet-tile-pane .bus-tile-light {
+  filter: saturate(0.5) brightness(0.6) contrast(1.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .leaflet-tile-pane .bus-tile-light {
+    filter: saturate(0.5) brightness(0.6) contrast(1.05);
+  }
 }
 
 .leaflet-control-attribution {
@@ -26,8 +31,147 @@
   color: var(--primary);
 }
 
-/* Marker HTML kustom tidak perlu background/border bawaan Leaflet. */
-.leaflet-marker-icon.bus-marker-reset {
+.leaflet-marker-icon.bus-marker-reset,
+.leaflet-marker-icon.bus-stop-icon {
   background: transparent;
   border: none;
+}
+
+/* ---- Marker bus (pil + panah arah) ---- */
+.bus-marker-inner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bus-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 9px solid var(--bus-color);
+  transform-origin: 50% 85%;
+  will-change: transform;
+}
+
+.bus-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bus-color);
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(18, 20, 31, 0.28);
+  transition: transform 0.2s ease;
+}
+
+.bus-pill svg {
+  width: 14px;
+  height: 14px;
+}
+
+.bus-marker-inner.is-selected .bus-pill {
+  transform: scale(1.1);
+}
+
+.bus-pulse {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 999px;
+  background: var(--bus-color);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bus-marker-inner.is-selected .bus-pulse {
+  animation: bus-pulse 1.6s ease-out infinite;
+}
+
+@keyframes bus-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+/* ---- Marker halte ---- */
+.stop-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transform: translate(-7px, -7px);
+}
+
+.stop-dot {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 999px;
+  background: #fff;
+  border: 2.5px solid #12141f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.stop-wrap.is-next .stop-dot {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+.stop-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  padding: 2px 6px;
+  border-radius: 6px;
+  backdrop-filter: blur(2px);
+}
+
+/* ---- Mode skematik: sembunyikan tile, tampilkan latar sederhana ---- */
+.schematic-mode {
+  background: transparent !important;
+}
+
+.schematic-mode .leaflet-tile-pane {
+  display: none;
+}
+
+.leaflet-marker-icon.schematic-label-icon {
+  background: transparent;
+  border: none;
+}
+
+.schematic-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+  white-space: nowrap;
 }

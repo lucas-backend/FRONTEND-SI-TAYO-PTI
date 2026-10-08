@@ -64,6 +64,13 @@ export function bearingAtDistance(path: readonly LatLng[], km: number, lookAhead
   return (deg + 360) % 360
 }
 
+/** Proyeksikan satu titik ke jarak terdekatnya di sepanjang rute (km). */
+export function distanceAlongRoute(path: readonly LatLng[], target: LatLng): number {
+  const line = buildLine(path)
+  const near = nearestPointOnLine(line, toTurfPoint(target), { units: 'kilometers' })
+  return (near.properties as { location?: number })?.location ?? 0
+}
+
 /** Proyeksikan tiap halte ke jarak terdekatnya di sepanjang rute (km). */
 export function projectStopsOnRoute(path: readonly LatLng[], stops: readonly { id: string; point: LatLng }[]): StopProjection[] {
   const line = buildLine(path)
