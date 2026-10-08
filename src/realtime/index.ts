@@ -5,7 +5,7 @@ import { createWsGateway } from './wsGateway'
 
 export const gateway: Gateway = IS_MOCK ? mockGateway : createWsGateway()
 
-export { mockGateway, publish, setGatewayConnected } from './mockGateway'
+export { mockGateway, publish, setGatewayConnected, broadcastControl } from './mockGateway'
 export { createWsGateway } from './wsGateway'
 export type {
   Gateway,
@@ -15,5 +15,8 @@ export type {
   Unsubscribe,
   BusCapacityEvent,
   BusLifecycleEvent,
+  BusSignalEvent,
+  BusControlEvent,
+  BusControlAction,
   GatewayStatusEvent,
 } from './gateway'

@@ -6,6 +6,8 @@ export type RealtimeChannel =
   | 'bus:capacity'
   | 'bus:started'
   | 'bus:stopped'
+  | 'bus:signal'
+  | 'bus:control'
   | 'gateway:status'
 
 export interface BusCapacityEvent {
@@ -21,6 +23,31 @@ export interface BusLifecycleEvent {
   ts: number
 }
 
+/**
+ * Sinyal GPS bus (skenario sinyal putus). `online=false` berarti posisi
+ * masuk antrean lokal (`queued`). Saat pulih, `pending` berisi jumlah
+ * lokasi tertunda yang sedang dikirim.
+ */
+export interface BusSignalEvent {
+  busId: string
+  online: boolean
+  queued: number
+  pending: number
+  ts: number
+}
+
+export type BusControlAction = 'START' | 'STOP' | 'CAPACITY' | 'SIGNAL_LOSS'
+
+/** Perintah kontrol dari simulator supir yang disiarkan ke tab leader. */
+export interface BusControlEvent {
+  origin: string
+  action: BusControlAction
+  busId: string
+  full?: boolean
+  seconds?: number
+  ts: number
+}
+
 export interface GatewayStatusEvent {
   connected: boolean
   ts: number
@@ -31,6 +58,8 @@ export interface RealtimeEventMap {
   'bus:capacity': BusCapacityEvent
   'bus:started': BusLifecycleEvent
   'bus:stopped': BusLifecycleEvent
+  'bus:signal': BusSignalEvent
+  'bus:control': BusControlEvent
   'gateway:status': GatewayStatusEvent
 }
 

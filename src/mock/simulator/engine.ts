@@ -1,4 +1,4 @@
-import { SIM } from '@/config'
+import { MAX_STEP_ELAPSED_S, SIM } from '@/config'
 import type { Bus, BusPosition, CapacityStatus, Route, Stop } from '@/api/types'
 import { BUSES, ROUTES, STOPS } from '@/mock/data'
 import { bearingAtDistance, normalizeDistance, pointAtDistance, projectStopsOnRoute, routeLengthKm } from '@/lib/geo'
@@ -55,11 +55,16 @@ function clamp(value: number, min: number, max: number): number {
 export class SimulationEngine {
   private runtimes: BusRuntime[] = []
   private timer: number | null = null
+  private lastTickTs = 0
   private speedMultiplier: number = SIM.DEFAULT_SPEED_MULTIPLIER
   private paused = false
   private readonly buses: Bus[]
   private readonly routes: readonly Route[]
   private readonly stops: readonly Stop[]
+  private readonly onVisibilityChange = () => {
+    if (typeof document === 'undefined') return
+    if (document.visibilityState === 'visible') this.tick()
+  }
 
   constructor(buses: readonly Bus[] = BUSES, routes: readonly Route[] = ROUTES, stops: readonly Stop[] = STOPS) {
     this.buses = buses.map((bus) => ({ ...bus }))
@@ -74,13 +79,20 @@ export class SimulationEngine {
 
   start(): void {
     if (this.timer !== null) return
+    this.lastTickTs = Date.now()
     this.timer = window.setInterval(() => this.tick(), SIM.TICK_MS)
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.onVisibilityChange)
+    }
   }
 
   stop(): void {
     if (this.timer === null) return
     window.clearInterval(this.timer)
     this.timer = null
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.onVisibilityChange)
+    }
   }
 
   setSpeedMultiplier(multiplier: number): void {
@@ -155,9 +167,16 @@ export class SimulationEngine {
   }
 
   private tick(): void {
-    if (this.paused) return
+    if (this.paused) {
+      this.lastTickTs = Date.now()
+      return
+    }
     const now = Date.now()
-    const dtSeconds = (SIM.TICK_MS / 1000) * this.speedMultiplier
+    const elapsedS = Math.min(MAX_STEP_ELAPSED_S, Math.max(0, (now - this.lastTickTs) / 1000))
+    this.lastTickTs = now
+    // dt dihitung dari timestamp nyata (bukan jumlah tick) supaya bus tetap
+    // mengejar posisi yang benar saat tab leader di-throttle/tersembunyi.
+    const dtSeconds = elapsedS * this.speedMultiplier
     for (const runtime of this.runtimes) {
       if (!runtime.active) continue
       this.advance(runtime, dtSeconds)
@@ -167,6 +186,7 @@ export class SimulationEngine {
 
   /** Majukan satu langkah (dipakai juga untuk uji konsol tanpa menunggu timer). */
   tickOnce(dtSeconds?: number): void {
+    this.lastTickTs = Date.now()
     const now = Date.now()
     const dt = dtSeconds ?? (SIM.TICK_MS / 1000) * this.speedMultiplier
     for (const runtime of this.runtimes) {
@@ -233,11 +253,26 @@ export class SimulationEngine {
     const position = this.buildPosition(runtime, now)
     if (runtime.offlineUntilTs > now) {
       runtime.queued.push(position)
+      // Beri tahu UI jumlah lokasi yang masuk antrean lokal.
+      publish('bus:signal', {
+        busId: runtime.bus.id,
+        online: false,
+        queued: runtime.queued.length,
+        pending: 0,
+        ts: now,
+      })
       return
     }
     if (runtime.queued.length > 0) {
       const queued = runtime.queued
       runtime.queued = []
+      publish('bus:signal', {
+        busId: runtime.bus.id,
+        online: true,
+        queued: 0,
+        pending: queued.length,
+        ts: now,
+      })
       for (const item of queued) this.publishPosition(item)
     }
     this.publishPosition(position)
@@ -309,10 +344,17 @@ export class SimulationEngine {
     publish('bus:capacity', capacityEventFromBus(runtime.bus))
   }
 
-  simulateSignalLoss(busId: string, seconds = SIM.OFFLINE_SECONDS): void {
+  simulateSignalLoss(busId: string, seconds: number = SIM.OFFLINE_SECONDS): void {
     const runtime = this.runtimes.find((item) => item.bus.id === busId)
     if (!runtime) return
     runtime.offlineUntilTs = Date.now() + seconds * 1000
+    publish('bus:signal', {
+      busId,
+      online: false,
+      queued: runtime.queued.length,
+      pending: 0,
+      ts: Date.now(),
+    })
   }
 
   queuedCount(busId: string): number {

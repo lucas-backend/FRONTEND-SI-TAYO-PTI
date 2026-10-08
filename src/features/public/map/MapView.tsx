@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn'
 import { RouteLayer } from './RouteLayer'
 import { StopLayer } from './StopLayer'
 import { BusLayer } from './BusLayer'
+import { UserLocationLayer } from './UserLocationLayer'
 import { SchematicLayer } from './SchematicLayer'
 
 interface MapBridgeProps {
@@ -75,6 +76,7 @@ export const MapView = memo(function MapView({
         {onMapClick && <MapClickHandler onClick={onMapClick} />}
         <RouteLayer activeRouteId={activeRouteId} />
         <StopLayer selectedBusId={selectedBusId} onSelectStop={onSelectStop} />
+        <UserLocationLayer />
         <BusLayer selectedBusId={selectedBusId} onSelectBus={onSelectBus} />
         {schematic && <SchematicLayer />}
       </MapContainer>

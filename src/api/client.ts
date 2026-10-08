@@ -101,6 +101,11 @@ export const api = {
     simulator.setCapacityFull(busId, status === 'FULL')
   },
 
+  async simulateSignalLoss(busId: string, seconds?: number): Promise<void> {
+    await delay(80)
+    simulator.simulateSignalLoss(busId, seconds)
+  },
+
   async resetDemo(): Promise<void> {
     await delay(160)
     simulator.reset()

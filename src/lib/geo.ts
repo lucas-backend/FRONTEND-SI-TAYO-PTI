@@ -1,4 +1,14 @@
-import { along, bearing, distance, length as turfLength, lineString, nearestPointOnLine, point } from '@turf/turf'
+import {
+  along,
+  bearing,
+  distance,
+  featureCollection,
+  length as turfLength,
+  lineString,
+  nearestPoint,
+  nearestPointOnLine,
+  point,
+} from '@turf/turf'
 import type { Feature, LineString, Point } from 'geojson'
 
 /**
@@ -81,4 +91,25 @@ export function projectStopsOnRoute(path: readonly LatLng[], stops: readonly { i
       return { stopId: stop.id, distanceKm: location }
     })
     .sort((a, b) => a.distanceKm - b.distanceKm)
+}
+
+export interface NearestStopResult {
+  stopId: string
+  distanceKm: number
+}
+
+/**
+ * Halte terdekat dari sebuah titik memakai `turf.nearestPoint`
+ * (BRIEF bagian 9.4). Mengembalikan null bila tidak ada halte.
+ */
+export function nearestStop(
+  from: LatLng,
+  stops: readonly { id: string; lat: number; lng: number }[],
+): NearestStopResult | null {
+  if (stops.length === 0) return null
+  const collection = featureCollection(stops.map((stop) => point([stop.lng, stop.lat], { id: stop.id })))
+  const near = nearestPoint(toTurfPoint(from), collection)
+  const stopId = (near.properties as { id?: string } | null)?.id
+  if (!stopId) return null
+  return { stopId, distanceKm: distance(toTurfPoint(from), near, { units: 'kilometers' }) }
 }

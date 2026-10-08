@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Bus, BusPosition, Route, Stop } from '@/api/types'
 import { api } from '@/api/client'
 import { gateway } from '@/realtime'
-import type { Unsubscribe } from '@/realtime'
+import type { BusSignalEvent, Unsubscribe } from '@/realtime'
 import { MAP_CONFIG } from '@/config'
 
 interface SimState {
@@ -15,6 +15,7 @@ interface SimState {
   stops: Stop[]
   buses: Bus[]
   positions: Record<string, BusPosition>
+  signals: Record<string, BusSignalEvent>
   load: () => Promise<void>
   bind: () => void
   resetDemo: () => Promise<void>
@@ -37,6 +38,7 @@ export const useSimStore = create<SimState>((set, get) => ({
   stops: [],
   buses: [],
   positions: {},
+  signals: {},
 
   async load() {
     set({ loading: true, error: null })
@@ -83,11 +85,19 @@ export const useSimStore = create<SimState>((set, get) => ({
         set((state) => {
           const nextPositions = { ...state.positions }
           delete nextPositions[event.busId]
+          const nextSignals = { ...state.signals }
+          delete nextSignals[event.busId]
           return {
             positions: nextPositions,
+            signals: nextSignals,
             buses: state.buses.map((bus) => (bus.id === event.busId ? { ...bus, status: 'STANDBY' } : bus)),
           }
         })
+      }),
+      gateway.subscribe('bus:signal', (event) => {
+        set((state) => ({
+          signals: { ...state.signals, [event.busId]: event },
+        }))
       }),
       gateway.subscribe('gateway:status', (event) => {
         set({ connected: event.connected })
@@ -98,7 +108,7 @@ export const useSimStore = create<SimState>((set, get) => ({
 
   async resetDemo() {
     await api.resetDemo()
-    set({ positions: {} })
+    set({ positions: {}, signals: {} })
     await get().load()
   },
 }))

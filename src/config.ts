@@ -50,3 +50,26 @@ export const OPERATIONAL_HOURS = { openHour: 6, openMinute: 30, closeHour: 17, c
 
 // Ambang keterisian kursi untuk warna bar progres.
 export const CAPACITY_THRESHOLDS = { medium: 0.6, high: 0.85 } as const
+
+// ETA personal (posisi pengguna) & notifikasi mock (BRIEF bagian 9.4 & 9.6).
+export const PERSONAL = {
+  /** Kecepatan berjalan kaki rata-rata untuk estimasi waktu tempuh. */
+  WALK_SPEED_KMH: 5,
+  /** Ambang pengingat "ingatkan saya saat bus N menit lagi". */
+  REMINDER_THRESHOLD_MIN: 5,
+  /** Batas maksimum jarak pengguna ke halte (km) agar dianggap di area kampus. */
+  MAX_USER_DISTANCE_KM: 1.2,
+} as const
+
+// Simulator supir (BRIEF bagian 10).
+export const DRIVER = {
+  /** Bus yang dikemudikan akun demo DRV-19842. */
+  demoBusId: 'bus-01',
+  /** Durasikan banner "Mengirim N lokasi tertunda..." (ms). */
+  RECOVER_BANNER_MS: 4200,
+} as const
+
+// Batas waktu nyata yang boleh diproses mesin dalam satu langkah (detik).
+// Mencegah lompatan ekstrem namun tetap membuat bus mengejar ketertinggalan
+// saat tab leader disembunyikan browser (interval di-throttle).
+export const MAX_STEP_ELAPSED_S = 300

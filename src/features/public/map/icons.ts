@@ -7,6 +7,7 @@ export function buildBusMarkerHtml(bus: Bus, color: string, selected: boolean): 
   return `<div class="bus-marker-inner${selected ? ' is-selected' : ''}" style="--bus-color:${color}">
     <div class="bus-arrow"></div>
     <div class="bus-pill">${BUS_SVG}<span>${bus.label} • ${bus.plate}</span></div>
+    <div class="bus-stale" hidden></div>
     <div class="bus-pulse"></div>
   </div>`
 }
@@ -14,4 +15,12 @@ export function buildBusMarkerHtml(bus: Bus, color: string, selected: boolean): 
 /** HTML marker halte: lingkaran + label. */
 export function buildStopIconHtml(name: string, isNext: boolean): string {
   return `<div class="stop-wrap${isNext ? ' is-next' : ''}"><span class="stop-dot"></span><span class="stop-label">${name}</span></div>`
+}
+
+/** HTML pin posisi pengguna (biru, dapat diseret pada mode simulasi). */
+export function buildUserPinHtml(draggable: boolean): string {
+  return `<div class="user-pin${draggable ? ' is-draggable' : ''}">
+    <span class="user-pulse"></span>
+    <span class="user-dot"></span>
+  </div>`
 }

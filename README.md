@@ -4,7 +4,7 @@ Mockup frontend interaktif Sistem Pelacak Bus Universitas Lampung (web publik,
 web admin, simulator supir). Spesifikasi lengkap: `docs/BRIEF.md`. Acuan visual:
 `docs/design/`.
 
-Status saat ini: **Tahap 1–5** dari urutan BRIEF bagian 16 sudah selesai.
+Status saat ini: **Tahap 1–7** dari urutan BRIEF bagian 16 sudah selesai.
 
 | Tahap | Isi | Status |
 | --- | --- | --- |
@@ -13,7 +13,9 @@ Status saat ini: **Tahap 1–5** dari urutan BRIEF bagian 16 sudah selesai.
 | 3 | Mesin simulasi + `mockGateway` + uji di konsol | Selesai |
 | 4 | Peta publik (Leaflet+OSM, rute/halte/bus bergerak, header/segmented/nav, mobile+desktop) | Selesai |
 | 5 | Bottom sheet detail bus (ETA countdown, daftar halte), tab Jadwal/Armada/Civitas, state loading/kosong/galat | Selesai |
-| 6–10 | ETA personal (lokasi saya), simulator supir, admin, panel demo, QA | Belum |
+| 6 | Posisi pengguna + ETA personal (Lokasi Saya, Posisi Simulasi, bus tercepat, notifikasi mock) | Selesai |
+| 7 | Simulator supir (`/driver`), sinyal putus, mode demo satu tab (`/demo`) | Selesai |
+| 8–10 | Admin, panel demo, QA | Belum |
 
 ## Menjalankan
 
@@ -30,8 +32,10 @@ Halaman publik:
 - `/jadwal` — Jadwal Halte: pilih halte, daftar kedatangan + countdown, jam operasional.
 - `/armada` — Armada: kartu semua bus; tap membuka peta terfokus pada bus itu.
 - `/civitas` — Civitas: panduan, FAQ, kontak UPT TIK, form saran, pengaturan notifikasi.
+- `/driver` — **Simulator Supir**: bingkai ponsel (Login → Panel Standby → Panel Tracking).
+- `/demo` — **Mode Demo**: simulator supir di kiri + peta publik di kanan dalam satu tab.
 - `/dev` — Lab Pengembangan (token, komponen, monitor simulasi + Reset Data Demo).
-- `/driver`, `/admin/*` — placeholder tahap 7–8.
+- `/admin/*` — placeholder tahap 8.
 
 ## Teknologi
 
@@ -52,20 +56,27 @@ src/
     data/     stops.ts, routes.ts, buses.ts, users.ts
     simulator/ engine.ts, eta.ts, instance.ts, runner.ts
   realtime/   gateway.ts (interface), mockGateway.ts, wsGateway.ts (stub)
-  store/      useSimStore.ts (bus/posisi/rute/halte + status gateway)
-  hooks/      useSimulation.ts, useCountdown.ts
+  store/      useSimStore.ts, useUserStore.ts (lokasi+pengingat), useDriverStore.ts
+  hooks/      useSimulation.ts, useCountdown.ts, useReminderWatcher.ts
   features/public/
     PublicLayout.tsx, nav.ts
-    map/      MapView, RouteLayer, StopLayer, BusLayer, BusMarker, SchematicLayer, icons
+    map/      MapView, RouteLayer, StopLayer, BusLayer, BusMarker, UserLocationLayer,
+              SchematicLayer, icons
     components/  PublicHeader, BottomNav, RouteControls, MapHintToast, SchematicToggle,
-                 ConnectionBanner, BusDetailContent, StopStatusList, BusCard, StateViews
+                 ConnectionBanner, BusDetailContent, StopStatusList, BusCard, StateViews,
+                 UserLocationControl, NearestStopChip, FastestBusCard, ReminderBell
     pages/    PublicMapPage, SchedulePage, FleetPage, CivitasPage
-    hooks/    useRouteProjection.ts
-    lib/      stopStatus.ts
+    hooks/    useRouteProjection.ts, usePersonalEta.ts
+    lib/      stopStatus.ts, userPresets.ts
+  features/driver/
+    DriverPage.tsx, DemoPage.tsx, DriverSimulator.tsx, PhoneFrame.tsx, DriverTopbar.tsx,
+    LoginPanel.tsx, StandbyPanel.tsx, TrackingPanel.tsx, CapacitySelector.tsx,
+    ConfirmDialog.tsx, SignalBanner.tsx, driverRoute.ts
   components/ui/  Button, Card, Chip, Badge, Toggle, SegmentedControl, Skeleton, Sheet, Toast
   lib/        geo.ts, format.ts, time.ts, cn.ts
   styles/     tokens.css, leaflet-overrides.css
-  config.ts   konstanta simulasi + pengaturan peta
+  config.ts   konstanta simulasi + pengaturan peta + ETA personal + simulator supir
+e2e/          screenshots.spec.ts, scenarios.spec.ts (Playwright)
 ```
 
 Tiga lapisan dipisah tegas: **UI → store/hooks → api/realtime**. Komponen tidak
@@ -91,6 +102,63 @@ mengimpor `src/mock` secara langsung; data masuk lewat store yang berlangganan
 - Opsional: tombol kompas "U" mengaktifkan **mode skematik** (tile disembunyikan,
   blok bangunan berlabel via `SchematicLayer`).
 
+## Posisi Pengguna & ETA Personal (Tahap 6)
+
+- Tombol **Lokasi Saya** di peta meminta `navigator.geolocation`. Bila ditolak,
+  tidak didukung, atau posisi di luar area kampus (jarak ke halte terdekat >
+  `PERSONAL.MAX_USER_DISTANCE_KM`), pengguna ditawari **Posisi Simulasi**: pin
+  biru yang dapat diseret plus preset `Dekat FMIPA`, `Dekat Perpus`, `Dekat FK`
+  (`features/public/lib/userPresets.ts`).
+- `usePersonalEta` menghitung halte terdekat dengan `turf.nearestPoint`
+  (`lib/geo.ts:nearestStop`) dan menampilkan chip melayang
+  `Halte terdekat: MIPA • 58 meter (<1 mnt jalan kaki)` (kecepatan jalan
+  5 km/jam, `PERSONAL.WALK_SPEED_KMH`).
+- Kartu **Bus tercepat untuk Anda** menampilkan bus dengan ETA terkecil ke halte
+  itu, waktu jalan kaki, dan saran `Berangkat sekarang` atau `Tunggu N menit`
+  (selisih ETA bus dengan waktu jalan kaki).
+- Garis putus abu dari posisi pengguna ke halte tujuan (`UserLocationLayer`).
+- **Notifikasi mock** (BRIEF 9.6): tombol lonceng per halte/kartu
+  (`ReminderBell`) menyimpan pengingat di `useUserStore`. `useReminderWatcher`
+  memantau ETA dan saat mencapai ambang 5 menit memunculkan toast + `Notification`
+  API bila diizinkan.
+
+## Simulator Supir & Mode Demo (Tahap 7)
+
+- `/driver` menampilkan bingkai ponsel ~390x800 dengan tiga layar mengikuti
+  gambar acuan: **Login** (`driver-1`), **Panel Standby** (`driver-2`), dan
+  **Panel Tracking Aktif** (`driver-3`).
+- Login mock `DRV-19842` / PIN `123456` (`api.login`, JWT palsu role DRIVER,
+  disimpan di `localStorage` sebagai persistensi demo). PIN salah menampilkan
+  galat merah; tautan `LIHAT` menyembunyikan/menampilkan PIN.
+- **START TRACKING** memanggil `/tracking/start` (bus naik `ACTIVE`, marker
+  muncul di peta publik). Toggle **Tersedia/Penuh** memengaruhi badge & sisa
+  kursi di peta publik dalam ≤ 3 detik. **STOP TRACKING** memakai dialog
+  konfirmasi, lalu marker bus hilang dengan animasi fade.
+- **Simulasikan Sinyal Putus**: banner oranye `Sinyal putus: lokasi masuk
+  antrean lokal (N)`, lalu `Mengirim N lokasi tertunda...` saat pulih. Di peta
+  publik marker bus menjadi abu dengan label `terakhir diperbarui N dtk lalu`
+  (channel `bus:signal`).
+- **`/demo`** (jalur utama presentasi) menampilkan ponsel supir di kiri dan peta
+  publik di kanan dalam satu tab, sehingga mesin simulasi berjalan di tab yang
+  sama. Route ini memaksa tab menjadi *leader* (`startSimulation(true)`).
+- **Sinkronisasi antar tab** tetap memakai `BroadcastChannel` (`mockGateway`)
+  sebagai cadangan, termasuk perintah kontrol `bus:control` yang diterapkan pada
+  tab penggerak.
+
+## Verifikasi (Playwright)
+
+Screenshot & skenario demo diuji dengan Playwright (Chromium) pada viewport
+persis **390x844** dan **1280x800**:
+
+```bash
+npx playwright test
+```
+
+Hasil tersimpan di `docs/screenshots/` (mis. `driver-1-login-390x844.png`,
+`demo-5-penuh-1280x800.png`, `demo-6-sinyal-putus-1280x800.png`). Skenario
+BRIEF bagian 14 butir 4–6 (ETA personal, START TRACKING + Penuh, sinyal putus &
+pemulihan) otomatis diverifikasi oleh `e2e/scenarios.spec.ts`.
+
 ## Kredensial Demo
 
 | Peran | Username / ID | PIN |
@@ -112,8 +180,10 @@ mengganti `VITE_USE_MOCK=false` untuk beralih backend.
 - `PATCH /buses/:id/capacity`
 
 Realtime (`src/realtime/gateway.ts`): event `bus:position`, `bus:capacity`,
-`bus:started`, `bus:stopped`, `gateway:status`. Implementasi aktif `mockGateway`
-(in-memory + `BroadcastChannel`); `wsGateway` masih stub menuju `VITE_WS_URL`.
+`bus:started`, `bus:stopped`, `bus:signal` (status GPS putus/pulih),
+`bus:control` (perintah supir antar tab), `gateway:status`. Implementasi aktif
+`mockGateway` (in-memory + `BroadcastChannel`); `wsGateway` masih stub menuju
+`VITE_WS_URL`.
 
 ## Mesin Simulasi
 
@@ -121,9 +191,12 @@ Realtime (`src/realtime/gateway.ts`): event `bus:position`, `bus:capacity`,
 → `runner.ts`): posisi sepanjang polyline (`turf.along`), kecepatan acak 10–16 km/jam
 (dipilih agar satu putaran Jalur 1 ~14 menit) dengan perlambatan menjelang halte,
 dwell 15–30 detik, `tick` 3 detik + jitter 0–1,5 detik, heading dari `turf.bearing`,
-dan ETA ke semua halte. Skenario yang sudah ada: sinyal putus (antrean offline +
-flush batch), keluar geofence (koordinat diabaikan store), toggle Penuh,
-add/remove/reset bus, pengali kecepatan, dan pause.
+dan ETA ke semua halte. Langkah mesin dihitung dari **timestamp nyata** (bukan
+jumlah tick) sehingga bus tetap mengejar posisi yang benar saat tab leader
+di-throttle/tersembunyi (`MAX_STEP_ELAPSED_S`). Skenario yang sudah ada: sinyal
+putus (antrean offline + flush batch + event `bus:signal`), keluar geofence
+(koordinat diabaikan store), toggle Penuh, add/remove/reset bus, pengali
+kecepatan, dan pause.
 
 ## Data Rute (hasil tracing)
 
@@ -152,8 +225,8 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 
 ## Asumsi
 
-1. **Tahap** — yang dikerjakan tahap 1–5. ETA personal/"Lokasi Saya" (tahap 6),
-   simulator supir (7), admin (8), panel demo (9), dan QA (10) belum.
+1. **Tahap** — yang dikerjakan tahap 1–7. Admin (8), panel demo (9), dan QA (10)
+   belum.
 2. **Koordinat** — titik halte asli diverifikasi lewat OpenStreetMap/Nominatim, lalu
    **diproyeksikan ke garis rute** (`turf.nearestPointOnLine`) sehingga marker halte
    tepat di atas rute. Jarak koreksi > 25 m dilaporkan di `mock/data/stops.ts`
@@ -166,10 +239,13 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 5. **Sinkronisasi antar tab** — engine hanya berjalan di tab "leader" (dipilih via
    heartbeat `localStorage` + id tab `sessionStorage`, sehingga reload tab yang sama
    langsung mengambil alih); tab lain menerima posisi lewat `BroadcastChannel`.
+   Perintah supir (`bus:control`) disiarkan agar tab leader ikut menerapkan.
 6. **Posisi penggerak** — pada mode mock posisi bus digerakkan mesin simulasi, bukan
    GPS asli; endpoint `/tracking/location` hanya mengembalikan posisi saat ini.
 7. **Penyimpanan** — belum ada persistensi CRUD admin; tombol Reset Data Demo
-   membangun ulang runtime dari data dummy.
+   membangun ulang runtime dari data dummy. Sesi login supir disimpan di
+   `localStorage` (persistensi demo), sedangkan posisi pengguna & pengingat hanya
+   di memori (tidak dipersistensi).
 8. **Gateway WebSocket** — `wsGateway` masih stub (throw) sampai backend tersedia.
 9. **Detail bus** — daftar halte ditampilkan lengkap per rute (tidak dikelompokkan
    seperti contoh "FMIPA • GSG" pada gambar) agar status Lewat/Berikutnya/+mnt jelas.
@@ -177,6 +253,19 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
     masih dekoratif (bukan jejak denah OSM).
 11. **Ukuran bundle** — `vite build` memunculkan peringatan chunk > 500 kB
     (Leaflet + Turf). Fungsional; code-splitting direncanakan pada tahap polesan (9).
-12. **Verifikasi viewport** — desktop dicek pada 1280px; mobile dirender pada 500px
-    (batas minimum lebar window Chrome di Windows). Layout mobile memakai breakpoint
-    `< 768px` yang sama untuk 390px, tanpa lebar tetap sehingga aman di 390px.
+12. **Verifikasi viewport** — screenshot memakai Playwright (Chromium) pada viewport
+    persis 390x844 dan 1280x800; artefak di `docs/screenshots/`.
+13. **Simulator supir vs data awal** — bus 01 sudah `ACTIVE` sejak data dummy (agar
+    peta publik langsung hidup). Panel `/driver` tetap menampilkan *Standby* setelah
+    login dan `START TRACKING` akan memulai ulang posisi bus; status panel mengikuti
+    aksi sesi supir, bukan status awal data.
+14. **Sinyal putus** — status "putus" disimulasikan di dalam mesin (`bus:signal`)
+    karena tidak ada GPS/backend asli. Durasi default 20 detik; marker publik jadi
+    abu + label waktu pembaruan terakhir.
+15. **`/demo` memaksa leader** — route `/demo` memaksa tab menjadi leader agar mesin
+    berjalan di tab yang sama dengan peta publik (jalur presentasi). Bila dibuka
+    bersamaan dengan tab leader lain, bisa terjadi dua penggerak; untuk presentasi
+    cukup buka `/demo` di satu tab.
+16. **Playwright sebagai devDependency** — ditambahkan khusus untuk verifikasi
+    screenshot/skenario (diminta pada instruksi tahap 7). Tidak memengaruhi runtime
+    aplikasi. Perintah: `npx playwright test`.

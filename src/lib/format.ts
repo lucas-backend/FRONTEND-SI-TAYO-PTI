@@ -1,4 +1,4 @@
-import { CAPACITY_THRESHOLDS } from '@/config'
+import { CAPACITY_THRESHOLDS, PERSONAL } from '@/config'
 
 /** Format jarak: < 1000 m -> "450 meter", selebihnya -> "1,2 km". */
 export function formatDistance(meters: number): string {
@@ -64,4 +64,17 @@ export function capacityTone(seatsTaken: number, capacity: number): CapacityTone
 export function remainingSeats(seatsTaken: number, capacity: number, status: 'AVAILABLE' | 'FULL'): number {
   if (status === 'FULL') return 0
   return Math.max(0, capacity - seatsTaken)
+}
+
+/** Estimasi waktu berjalan kaki (menit) untuk jarak tertentu, kecepatan 5 km/jam. */
+export function walkMinutes(distanceKm: number): number {
+  if (!Number.isFinite(distanceKm) || distanceKm <= 0) return 0
+  return (distanceKm / PERSONAL.WALK_SPEED_KMH) * 60
+}
+
+/** Label waktu jalan kaki: "2 mnt jalan kaki". */
+export function formatWalkTime(distanceKm: number): string {
+  const minutes = walkMinutes(distanceKm)
+  if (minutes < 1) return '<1 mnt jalan kaki'
+  return `${Math.round(minutes)} mnt jalan kaki`
 }

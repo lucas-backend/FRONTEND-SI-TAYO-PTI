@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useSimStore } from '@/store/useSimStore'
 import type { Bus, Route, Stop } from '@/api/types'
+import type { BusSignalEvent } from '@/realtime'
 
 /** Hook baca state simulasi. Komponen UI hanya lewat sini, bukan impor mock. */
 export function useRoutes(): Route[] {
@@ -17,6 +18,10 @@ export function useBuses(): Bus[] {
 
 export function usePositions() {
   return useSimStore((state) => state.positions)
+}
+
+export function useSignals(): Record<string, BusSignalEvent> {
+  return useSimStore((state) => state.signals)
 }
 
 export function useConnection(): boolean {

@@ -3,6 +3,7 @@ import { useMap } from 'react-leaflet'
 import * as L from 'leaflet'
 import type { Bus, BusPosition, Route } from '@/api/types'
 import { SIM } from '@/config'
+import { formatAgo } from '@/lib/time'
 import { buildBusMarkerHtml } from './icons'
 
 interface BusMarkerProps {
@@ -10,6 +11,7 @@ interface BusMarkerProps {
   route: Route
   position: BusPosition
   selected: boolean
+  online: boolean
   onSelect: (busId: string) => void
 }
 
@@ -23,8 +25,11 @@ function lerpAngle(from: number, to: number, t: number): number {
  * Marker bus dengan animasi mulus lewat requestAnimationFrame: posisi
  * diinterpolasi dari posisi lama ke posisi baru selama ~3 detik tanpa
  * memicu render ulang seluruh peta (marker dimanipulasi via ref Leaflet).
+ *
+ * Saat sinyal bus putus (`online=false`) marker jadi abu dan menampilkan
+ * label "terakhir diperbarui N dtk lalu" (BRIEF bagian 9.7 & 10.4).
  */
-export function BusMarker({ bus, route, position, selected, onSelect }: BusMarkerProps) {
+export function BusMarker({ bus, route, position, selected, online, onSelect }: BusMarkerProps) {
   const map = useMap()
   const markerRef = useRef<L.Marker | null>(null)
   const innerRef = useRef<HTMLDivElement | null>(null)
@@ -58,12 +63,15 @@ export function BusMarker({ bus, route, position, selected, onSelect }: BusMarke
     markerRef.current = marker
   }, [map, bus, route.color, position.lat, position.lng, position.heading])
 
-  // Bersihkan saat unmount.
+  // Bersihkan saat unmount dengan animasi fade-out (marker bus hilang halus).
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-      markerRef.current?.remove()
+      const marker = markerRef.current
       markerRef.current = null
+      if (!marker) return
+      innerRef.current?.classList.add('is-leaving')
+      window.setTimeout(() => marker.remove(), 380)
     }
   }, [])
 
@@ -97,6 +105,26 @@ export function BusMarker({ bus, route, position, selected, onSelect }: BusMarke
   useEffect(() => {
     innerRef.current?.classList.toggle('is-selected', selected)
   }, [selected])
+
+  // Status sinyal: abu + label "terakhir diperbarui N dtk lalu".
+  useEffect(() => {
+    const inner = innerRef.current
+    const stale = inner?.querySelector<HTMLDivElement>('.bus-stale')
+    if (!inner || !stale) return
+    inner.classList.toggle('is-stale', !online)
+    if (online) {
+      stale.hidden = true
+      stale.textContent = ''
+      return
+    }
+    const update = () => {
+      stale.hidden = false
+      stale.textContent = `terakhir diperbarui ${formatAgo(position.ts)}`
+    }
+    update()
+    const timer = window.setInterval(update, 1000)
+    return () => window.clearInterval(timer)
+  }, [online, position.ts])
 
   return null
 }

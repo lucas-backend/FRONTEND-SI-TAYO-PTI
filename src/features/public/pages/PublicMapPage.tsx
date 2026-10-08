@@ -19,6 +19,7 @@ import {
   useLoadSim,
 } from '@/hooks/useSimulation'
 import { useSimStore } from '@/store/useSimStore'
+import { useUserStore } from '@/store/useUserStore'
 import { MapView } from '../map/MapView'
 import { RouteControls } from '../components/RouteControls'
 import { MapHintToast } from '../components/MapHintToast'
@@ -28,6 +29,11 @@ import { BusDetailContent } from '../components/BusDetailContent'
 import { BusCard } from '../components/BusCard'
 import { EmptyBusesState, ErrorState, PanelSkeleton } from '../components/StateViews'
 import { useRouteProjection } from '../hooks/useRouteProjection'
+import { usePersonalEta } from '../hooks/usePersonalEta'
+import { UserLocationControl } from '../components/UserLocationControl'
+import { NearestStopChip } from '../components/NearestStopChip'
+import { FastestBusCard } from '../components/FastestBusCard'
+import { cn } from '@/lib/cn'
 
 export function PublicMapPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -44,6 +50,8 @@ export function PublicMapPage() {
   const error = useSimError()
   const load = useLoadSim()
   const stopMap = useStopMap()
+  const userLocation = useUserStore((state) => state.location)
+  const { nearest, fastest } = usePersonalEta(userLocation)
 
   const [activeRouteId, setActiveRouteId] = useState<RouteCode>('J1')
   const [targetSelection, setTargetSelection] = useState<{ busId: string | null; stopId: string | null }>({
@@ -123,6 +131,7 @@ export function PublicMapPage() {
         />
 
         <div className="hidden md:flex md:flex-col md:gap-3">
+          {nearest && fastest && <FastestBusCard nearest={nearest} fastest={fastest} />}
           {showError ? (
             <ErrorState message={error ?? ''} onRetry={() => void load()} />
           ) : !hydrated ? (
@@ -189,10 +198,20 @@ export function PublicMapPage() {
         <SchematicToggle
           active={schematic}
           onToggle={() => setSchematic((value) => !value)}
-          raised={!hintDismissed && !selectedBusId && activeBusCount > 0}
         />
+        {nearest && (
+          <div className={cn('absolute inset-x-0 z-20', connected ? 'top-3' : 'top-14')}>
+            <NearestStopChip nearest={nearest} />
+          </div>
+        )}
+        <UserLocationControl className="bottom-3 right-3" />
+        {nearest && fastest && (
+          <div className="absolute inset-x-3 bottom-[4.5rem] z-20 md:hidden">
+            <FastestBusCard nearest={nearest} fastest={fastest} />
+          </div>
+        )}
         <MapHintToast
-          visible={!hintDismissed && !selectedBusId && activeBusCount > 0}
+          visible={!hintDismissed && !selectedBusId && activeBusCount > 0 && !fastest}
           onAction={() => setHintDismissed(true)}
         />
         {hydrated && activeBusCount === 0 && (

@@ -1,5 +1,7 @@
 import { simulator } from './instance'
 import { useSimStore } from '@/store/useSimStore'
+import { gateway } from '@/realtime'
+import type { BusControlEvent } from '@/realtime'
 
 const LEADER_TS_KEY = 'bus-unila:leader-ts'
 const LEADER_OWNER_KEY = 'bus-unila:leader-owner'
@@ -10,6 +12,7 @@ const STALE_MS = 6000
 let started = false
 let isLeader = false
 let heartbeat: number | null = null
+let controlUnsub: (() => void) | null = null
 
 function now(): number {
   return Date.now()
@@ -62,6 +65,33 @@ function releaseLeadership(): void {
   isLeader = false
 }
 
+/** Paksa tab ini menjadi leader meski ada tab lain (dipakai route /demo). */
+function forceLeadership(): void {
+  if (storageAvailable()) {
+    localStorage.setItem(LEADER_TS_KEY, String(now()))
+    localStorage.setItem(LEADER_OWNER_KEY, tabId())
+  }
+  isLeader = true
+}
+
+/** Terapkan perintah kontrol supir pada mesin lokal (tab penggerak). */
+function applyControl(event: BusControlEvent): void {
+  switch (event.action) {
+    case 'START':
+      simulator.startTracking(event.busId)
+      break
+    case 'STOP':
+      simulator.stopTracking(event.busId)
+      break
+    case 'CAPACITY':
+      simulator.setCapacityFull(event.busId, Boolean(event.full))
+      break
+    case 'SIGNAL_LOSS':
+      simulator.simulateSignalLoss(event.busId, event.seconds)
+      break
+  }
+}
+
 function startHeartbeat(): void {
   if (heartbeat !== null) return
   heartbeat = window.setInterval(() => {
@@ -78,19 +108,29 @@ function startHeartbeat(): void {
  * Nyalakan simulasi saat aplikasi dibuka. Hanya satu tab yang menjadi
  * "leader" penggerak bus; tab lain menerima posisi lewat BroadcastChannel,
  * sehingga simulator supir dan peta publik tetap sinkron.
+ *
+ * `force` dipakai route /demo (satu tab berisi simulator supir + peta publik)
+ * agar mesin pasti berjalan di tab itu tanpa bergantung pada heartbeat.
  */
-export function startSimulation(): void {
+export function startSimulation(force = false): void {
   if (started) return
   started = true
   const store = useSimStore.getState()
   void store.load()
   store.bind()
-  if (claimLeadership() && !simulator.isRunning()) simulator.start()
+  const leader = force ? (forceLeadership(), true) : claimLeadership()
+  if (leader && !simulator.isRunning()) simulator.start()
+  controlUnsub = gateway.subscribe('bus:control', (event) => {
+    if (!simulator.isRunning()) return
+    applyControl(event)
+  })
   startHeartbeat()
 }
 
 export function stopSimulation(): void {
   simulator.stop()
+  controlUnsub?.()
+  controlUnsub = null
   // Lepas kepemimpinan agar tab lain bisa mengambil alih dan agar efek
   // StrictMode (mount-unmount-mount) dapat mengklaim ulang pada mount berikutnya.
   releaseLeadership()

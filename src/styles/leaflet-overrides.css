@@ -102,6 +102,91 @@
   animation: bus-pulse 1.6s ease-out infinite;
 }
 
+/* Marker bus saat sinyal putus: abu + label waktu pembaruan terakhir. */
+.bus-marker-inner.is-stale .bus-pill {
+  background: #9aa0b4;
+}
+
+.bus-marker-inner.is-stale .bus-arrow {
+  border-bottom-color: #9aa0b4;
+}
+
+.bus-stale {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(90, 96, 116, 0.92);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Marker bus menghilang dengan fade saat STOP TRACKING. */
+.bus-marker-inner.is-leaving {
+  opacity: 0;
+  transform: translate(-50%, -100%) scale(0.82);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+}
+
+/* ---- Pin posisi pengguna ---- */
+.leaflet-marker-icon.user-pin-icon {
+  background: transparent;
+  border: none;
+}
+
+.user-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.user-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(18, 20, 31, 0.35);
+}
+
+.user-pulse {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--primary);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: user-pulse 1.9s ease-out infinite;
+}
+
+.user-pin.is-draggable .user-dot {
+  cursor: grab;
+}
+
+.user-pin.is-draggable .user-dot:active {
+  cursor: grabbing;
+}
+
+@keyframes user-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
 @keyframes bus-pulse {
   0% {
     opacity: 0.55;

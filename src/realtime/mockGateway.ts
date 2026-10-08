@@ -40,6 +40,15 @@ export function setGatewayConnected(value: boolean): void {
   broadcast?.postMessage({ channel: 'gateway:status', payload: { connected: value, ts: Date.now() } })
 }
 
+/**
+ * Siarkan perintah kontrol supir ke tab lain TANPA memicu handler lokal.
+ * Pesan BroadcastChannel tidak kembali ke konteks pengirim, sehingga tab
+ * pengirim cukup menerapkan aksi secara langsung tanpa dobel.
+ */
+export function broadcastControl(payload: RealtimePayload<'bus:control'>): void {
+  broadcast?.postMessage({ channel: 'bus:control', payload })
+}
+
 export const mockGateway: Gateway = {
   subscribe<C extends RealtimeChannel>(name: C, callback: (payload: RealtimePayload<C>) => void): Unsubscribe {
     const handler: Handler = (payload) => callback(payload as RealtimePayload<C>)

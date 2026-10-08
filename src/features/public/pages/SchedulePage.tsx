@@ -8,6 +8,7 @@ import { formatEta } from '@/lib/format'
 import { formatOperationalHours, isWithinOperationalHours } from '@/lib/time'
 import { cn } from '@/lib/cn'
 import { EmptyBusesState, PanelSkeleton } from '../components/StateViews'
+import { ReminderBell } from '../components/ReminderBell'
 
 interface ScheduleRowData {
   bus: Bus
@@ -16,7 +17,7 @@ interface ScheduleRowData {
   minutes: number
 }
 
-function ScheduleRow({ row }: { row: ScheduleRowData }) {
+function ScheduleRow({ row, stopId }: { row: ScheduleRowData; stopId: string }) {
   const countdown = useCountdown(row.minutes, row.position.ts)
   return (
     <Card className="flex items-center gap-3 p-4">
@@ -31,6 +32,7 @@ function ScheduleRow({ row }: { row: ScheduleRowData }) {
         <p className="text-[11px] uppercase tracking-[0.06em] text-muted">Perkiraan tiba</p>
       </div>
       <Badge status={row.bus.capacityStatus} />
+      <ReminderBell stopId={stopId} busId={row.bus.id} />
     </Card>
   )
 }
@@ -101,7 +103,7 @@ export function SchedulePage() {
           ) : rows.length === 0 ? (
             <EmptyBusesState message="Belum ada bus menuju halte ini" />
           ) : (
-            rows.map((row) => <ScheduleRow key={row.bus.id} row={row} />)
+            rows.map((row) => <ScheduleRow key={row.bus.id} row={row} stopId={activeStopId} />)
           )}
         </div>
       </div>
