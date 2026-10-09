@@ -89,7 +89,7 @@ function ComponentLab() {
         <Card className="space-y-2 p-5">
           <p className="text-4xl font-extrabold tracking-[-0.03em] text-ink">BE 2045 UZ</p>
           <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted">Nomor Armada</p>
-          <p className="text-[15px] text-ink">Jalur Lingkar Luar (Gedung Serba Guna - FMIPA - Rektorat)</p>
+          <p className="text-[15px] text-ink">Jalur 1 (Titik Jemput FEB - FMIPA - Rektorat)</p>
         </Card>
       </Section>
 

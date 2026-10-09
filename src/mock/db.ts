@@ -10,7 +10,7 @@ import { DEMO_CREDENTIALS, USERS } from './data/users'
  * sehingga data kembali ke seed (`mock/data`). Mesin simulasi & klien API
  * membaca dari sini, bukan lagi langsung dari konstanta seed.
  */
-export const DEMO_STORAGE_KEY = 'bus-unila:demo-data:v1'
+export const DEMO_STORAGE_KEY = 'bus-unila:demo-data:v2'
 
 interface DemoData {
   buses: Bus[]

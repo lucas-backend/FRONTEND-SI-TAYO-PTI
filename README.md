@@ -4,7 +4,8 @@ Mockup frontend interaktif Sistem Pelacak Bus Universitas Lampung (web publik,
 web admin, simulator supir). Spesifikasi lengkap: `docs/BRIEF.md`. Acuan visual:
 `docs/design/`.
 
-Status saat ini: **Tahap 1–7, 8A, dan 8B** dari urutan BRIEF bagian 16 sudah selesai.
+Status saat ini: **Tahap 1–9 versi ringkas** dari urutan BRIEF bagian 16 sudah
+dikerjakan. QA browser lengkap untuk seluruh checklist BRIEF masih tersisa.
 
 | Tahap | Isi | Status |
 | --- | --- | --- |
@@ -17,8 +18,8 @@ Status saat ini: **Tahap 1–7, 8A, dan 8B** dari urutan BRIEF bagian 16 sudah s
 | 7 | Simulator supir (`/driver`), sinyal putus, mode demo satu tab (`/demo`) | Selesai |
 | 8A | Fondasi admin: auth + guard, layout, dashboard, monitor, CRUD armada & akun, persistensi demo | Selesai |
 | 8B | Editor rute & halte interaktif | Selesai |
-| 9 | Panel demo, tur, polesan responsif & mode gelap | Belum |
-| 10 | QA terhadap checklist, README | Belum |
+| 9 | Panel demo, code-splitting, debug peta, dan polesan tahap 8B | Ringkas selesai |
+| 10 | QA terhadap checklist, README | README diperbarui; QA lengkap belum |
 
 ## Menjalankan
 
@@ -27,7 +28,14 @@ npm install
 npm run dev       # http://localhost:5173
 npm run build     # tsc -b && vite build
 npm run lint
+npm run typecheck
+npm run test      # Vitest
+npm run preview   # uji build produksi
 ```
+
+Panel Demo hanya dirender bila environment memiliki `VITE_DEMO_MODE=true`.
+Panel dapat disembunyikan atau ditampilkan dengan `Shift+D` dan tersedia di
+halaman publik, `/demo`, serta `/admin`.
 
 Halaman publik:
 - `/` — **Peta Rute**: peta OSM live, rute + halte, marker bus bergerak, segmented
@@ -55,7 +63,7 @@ dengan CSS variables, `lucide-react`, React Hook Form + Zod, Recharts, font Inte
 
 ```
 src/
-  app/        router, providers, bootstrap, halaman dev/placeholder
+  app/        router, providers, bootstrap, halaman dev
   api/        types.ts, endpoints.ts, client.ts (flag mock)
   mock/
     data/     stops.ts, routes.ts, buses.ts, users.ts
@@ -78,7 +86,10 @@ src/
     LoginPanel.tsx, StandbyPanel.tsx, TrackingPanel.tsx, CapacitySelector.tsx,
     ConfirmDialog.tsx, SignalBanner.tsx, driverRoute.ts
   components/ui/  Button, Card, Chip, Badge, Toggle, SegmentedControl, Skeleton, Sheet, Toast
-  lib/        geo.ts, format.ts, time.ts, cn.ts
+  lib/        geo.ts, geo.test.ts, displayNames.ts, format.ts, time.ts, cn.ts
+  features/admin/ routeValidation.ts
+  features/demo/  DemoPanel.tsx
+  vitest.config.ts
   styles/     tokens.css, leaflet-overrides.css
   config.ts   konstanta simulasi + pengaturan peta + ETA personal + simulator supir
 e2e/          screenshots.spec.ts, scenarios.spec.ts (Playwright)
@@ -116,7 +127,7 @@ mengimpor `src/mock` secara langsung; data masuk lewat store yang berlangganan
   (`features/public/lib/userPresets.ts`).
 - `usePersonalEta` menghitung halte terdekat dengan `turf.nearestPoint`
   (`lib/geo.ts:nearestStop`) dan menampilkan chip melayang
-  `Halte terdekat: MIPA • 58 meter (<1 mnt jalan kaki)` (kecepatan jalan
+  `Halte terdekat: Titik Jemput FMIPA • 58 meter (<1 mnt jalan kaki)` (kecepatan jalan
   5 km/jam, `PERSONAL.WALK_SPEED_KMH`).
 - Kartu **Bus tercepat untuk Anda** menampilkan bus dengan ETA terkecil ke halte
   itu, waktu jalan kaki, dan saran `Berangkat sekarang` atau `Tunggu N menit`
@@ -150,7 +161,7 @@ mengimpor `src/mock` secara langsung; data masuk lewat store yang berlangganan
   sebagai cadangan, termasuk perintah kontrol `bus:control` yang diterapkan pada
   tab penggerak.
 
-## Web Admin (Tahap 8A)
+## Web Admin (Tahap 8A–8B)
 
 - Route `/admin/*` dilindungi `RequireAdmin` (guard role `ADMIN`). Sesi admin
   disimpan terpisah di `localStorage` (`bus-unila:admin-session`), berbeda dari
@@ -179,16 +190,59 @@ mengimpor `src/mock` secara langsung; data masuk lewat store yang berlangganan
   (PIN acak ditampilkan sekali), nonaktifkan. Supir nonaktif gagal login di
   `/driver`.
 - **Persistensi demo**: hasil CRUD disimpan pada satu key `localStorage`
-  ber-versi (`bus-unila:demo-data:v1`) melalui `src/mock/db.ts`. Tombol **Reset
+  ber-versi (`bus-unila:demo-data:v2`) melalui `src/mock/db.ts`. Tombol **Reset
   Data Demo** (sidebar admin & `/dev`) menghapus key tersebut dan mengembalikan
   armada ke seed. Perubahan armada disiarkan lewat channel realtime
   `fleet:changed` sehingga peta publik di tab lain (`BroadcastChannel`) atau di
   `/demo` ikut berubah: bus baru muncul, bus nonaktif hilang, kapasitas berubah.
-- **Rute & Halte** (`/admin/rute-halte`) masih placeholder "Segera hadir"
-  (editor dikerjakan pada tahap 8B).
+- **Rute & Halte** (`/admin/rute`, alias `/admin/rute-halte`): kartu rute
+  menampilkan warna, gaya garis, panjang, jumlah halte, interval, dan estimasi
+  satu putaran. Editor desktop menyediakan gambar/seret/hapus/sisip titik,
+  undo/redo, tutup loop, snap ke jaringan rute contoh, impor/ekspor GeoJSON,
+  warna, gaya garis, tambah/seret/ubah nama/hapus halte, urut manual atau
+  otomatis, serta indikator jarak koreksi halte. Validasi sebelum simpan
+  menggunakan Zod dan perubahan rute/halte disiarkan melalui `routes:changed`.
+- **Panel Demo**: kontrol kecepatan simulasi 1x/2x/5x, jeda semua bus,
+  tambah bus, kapasitas, sinyal putus 20 detik, keluar area, hentikan bus,
+  preset lokasi pengguna, dan Reset Data Demo. Aksi melewati `api/client` dan
+  gateway agar dapat diterapkan lintas tab.
+- **Status bus awal**: Bus 01 mulai `STANDBY` dan baru tampil setelah
+  `START TRACKING`; Bus 02 tetap `ACTIVE`. Rute nonaktif tidak menggerakkan bus
+  dan perubahan geometri memproyeksikan posisi bus ke rute baru.
 - Setiap tabel punya state loading (skeleton), kosong, dan galat.
 
-## Verifikasi (Playwright)
+## Code-splitting dan debug peta
+
+- Halaman publik, driver, demo, dan admin dimuat dengan `React.lazy` +
+  `Suspense` dan fallback skeleton.
+- `vite.config.ts` memisahkan chunk Leaflet, Turf, dan Recharts. Pada build
+  terakhir chunk terbesar sekitar 375 kB, sehingga tidak ada chunk yang
+  melewati batas 500 kB.
+- Tambahkan `?debug=1` pada halaman peta untuk menampilkan titik debug merah
+  pada geometri rute. Setiap rute tetap dirender satu kali berdasarkan id rute.
+
+## Verifikasi
+
+Pemeriksaan yang sudah dijalankan:
+
+```bash
+npm run lint       # lulus
+npm run typecheck  # lulus
+npm run test       # 5 test lulus
+npm run build      # lulus
+npm run preview    # HTTP 200 pada localhost:4173
+```
+
+Vitest mencakup panjang rute, snap halte, urutan halte, validasi Zod,
+penutupan/proyeksi geometri, dan jarak bus ke garis. Seed pemilik proyek
+`src/mock/data/stops.ts` dan `src/mock/data/routes.ts` tidak berubah.
+
+Playwright lengkap untuk alur editor, sinkronisasi lintas tab, reset, impor
+GeoJSON, rute nonaktif, kecepatan 5x, dan pengulangan skenario BRIEF bagian 14
+belum dijalankan pada tahap ini. Karena itu screenshot baru dan klaim kelulusan
+alur browser lengkap belum dicantumkan sebagai hasil verifikasi.
+
+### Verifikasi Playwright terdahulu
 
 Screenshot & skenario demo diuji dengan Playwright (Chromium) pada viewport
 persis **390x844**, **1280x800**, dan **768x1024**:
@@ -252,14 +306,14 @@ Jumlah titik < 1500 sehingga tidak disederhanakan.
 
 | Rute | Titik | Panjang | Halte (arah putaran) | Satu putaran |
 | --- | --- | --- | --- | --- |
-| J1 Lingkar Luar | 67 | 2,537 km | pertanian → gsg → rektorat → fk → mipa → bundaran | ~14,5 menit |
-| J2 Lingkar Dalam | 73 | 1,819 km | perpus → rektorat | ~9 menit |
+| Jalur 1 | 67 | 2,537 km | Titik Jemput Terpadu → Pertanian → Titik Jemput FEB → Titik Jemput Rektorat → Titik Jemput FMIPA | ~14,5 menit |
+| Jalur 2 | 73 | 1,819 km | Titik Jemput Terpadu → Titik Jemput Rektorat | ~9 menit |
 
-Setiap halte diproyeksikan ke garis rute dengan `turf.nearestPointOnLine`; koordinat
-halte di `mock/data/stops.ts` digeser ke titik terdekat di rute (marker tepat di atas
-garis). **Peringatan jarak koreksi > 25 m:** FK 456 m, Perpus 352 m, Bundaran 156 m,
-MIPA 103 m, Pertanian 87 m, GSG 62 m, Rektorat 44 m. Artinya rute hasil tracing belum
-menjangkau gedung FK/Perpus; perlu tracing ulang atau penyesuaian titik halte.
+Setiap titik jemput diproyeksikan ke garis rute dengan `turf.nearestPointOnLine`; hasil
+suntingan editor disimpan sebagai override di `src/mock/db.ts`, bukan dengan
+mengubah `mock/data/stops.ts`. Editor menampilkan peringatan jarak koreksi > 25 m:
+FMIPA 103 m, Pertanian 87 m, FEB 62 m, Rektorat 44 m. Titik Jemput Terpadu
+ditambahkan di awal geometri rute.
 
 ### Uji mesin di konsol
 
@@ -271,13 +325,13 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 
 ## Asumsi
 
-1. **Tahap** — tahap 8B memakai editor Leaflet desktop responsif; panel demo (9)
-   dan QA penuh (10) belum dikerjakan.
+1. **Tahap** — tahap 9 yang dikerjakan adalah versi ringkas: Panel Demo,
+   code-splitting, debug peta, dan penutupan celah editor 8B. Tur lima langkah
+   dan mode gelap menyeluruh tidak dikerjakan.
 2. **Koordinat** — titik halte asli diverifikasi lewat OpenStreetMap/Nominatim, lalu
    **diproyeksikan ke garis rute** (`turf.nearestPointOnLine`) sehingga marker halte
    tepat di atas rute. Jarak koreksi > 25 m dilaporkan di `mock/data/stops.ts`
-   (terbesar: FK 456 m, Perpus 352 m); hal ini karena rute tracing belum menjangkau
-   kedua gedung tersebut.
+   (terbesar: FMIPA 103 m); titik jemput terpadu memakai koordinat awal jalur.
 3. **Geometri rute** — memakai hasil tracing `docs/data/jalur*.geojson` apa adanya
    (bukan lagi spline Catmull-Rom). Titik duplikat berurutan dihapus, loop ditutup,
    dan panjang/ETA dihitung ulang dari geometri tersebut.
@@ -289,24 +343,24 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 6. **Posisi penggerak** — pada mode mock posisi bus digerakkan mesin simulasi, bukan
    GPS asli; endpoint `/tracking/location` hanya mengembalikan posisi saat ini.
 7. **Penyimpanan** — hasil CRUD admin (bus, akun, PIN, rute, dan halte) dipersistensi
-   pada satu key `localStorage` ber-versi `bus-unila:demo-data:v1` (`src/mock/db.ts`);
+   pada satu key `localStorage` ber-versi `bus-unila:demo-data:v2` (`src/mock/db.ts`);
    data awal `mock/data/routes.ts` dan `mock/data/stops.ts` tidak pernah ditulis ulang.
    Tombol Reset Data Demo menghapus key tersebut dan kembali ke seed. Sesi login supir
    dan admin disimpan di `localStorage` (key terpisah), sedangkan posisi pengguna,
    pengingat, jejak bus, aktivitas, dan latensi hanya di memori.
 8. **Gateway WebSocket** — `wsGateway` masih stub (throw) sampai backend tersedia.
-9. **Detail bus** — daftar halte ditampilkan lengkap per rute (tidak dikelompokkan
-   seperti contoh "FMIPA • GSG" pada gambar) agar status Lewat/Berikutnya/+mnt jelas.
+9. **Detail bus** — daftar titik jemput ditampilkan lengkap per rute agar status
+   Lewat/Berikutnya/+mnt jelas.
 10. **Mode skematik** — blok bangunan memakai koordinat nyata namun bentuk/ukuran
     masih dekoratif (bukan jejak denah OSM).
-11. **Ukuran bundle** — `vite build` memunculkan peringatan chunk > 500 kB
-    (Leaflet + Turf). Fungsional; code-splitting direncanakan pada tahap polesan (9).
-12. **Verifikasi viewport** — screenshot memakai Playwright (Chromium) pada viewport
-    persis 390x844 dan 1280x800; artefak di `docs/screenshots/`.
-13. **Simulator supir vs data awal** — bus 01 sudah `ACTIVE` sejak data dummy (agar
-    peta publik langsung hidup). Panel `/driver` tetap menampilkan *Standby* setelah
-    login dan `START TRACKING` akan memulai ulang posisi bus; status panel mengikuti
-    aksi sesi supir, bukan status awal data.
+11. **Ukuran bundle** — `vite build` memakai manual chunk Leaflet, Turf, dan
+    Recharts. Build terakhir tidak menghasilkan chunk di atas 500 kB; entry dan
+    Recharts masing-masing sekitar 375 kB.
+12. **Verifikasi viewport** — screenshot Playwright terdahulu memakai Chromium
+    pada viewport 390x844 dan 1280x800. Verifikasi baru yang diminta pada
+    1280x800 dan 768x1024 belum dijalankan penuh.
+13. **Simulator supir vs data awal** — Bus 01 sekarang `STANDBY` pada data
+    awal dan marker baru tampil setelah `START TRACKING`; Bus 02 tetap `ACTIVE`.
 14. **Sinyal putus** — status "putus" disimulasikan di dalam mesin (`bus:signal`)
     karena tidak ada GPS/backend asli. Durasi default 20 detik; marker publik jadi
     abu + label waktu pembaruan terakhir.
@@ -340,8 +394,13 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 25. **Channel `fleet:changed`** — channel realtime baru untuk menyiarkan daftar
     armada ke seluruh tab saat CRUD admin; mesin simulasi di tab leader ikut
     menyinkronkan runtime lewat channel ini.
-26. **Anomali data halte** — pada satu titik saat pengerjaan, `mock/data/stops.ts`
-    sempat berubah di luar perubahan tahap 8A (id `tj-*`) sementara
-    `mock/data/routes.ts` belum disesuaikan, sehingga pemetaan rute↔halte kosong.
-    File dikembalikan ke versi HEAD (konsisten) agar fitur tetap berjalan; editor
-    rute/halte (8B) belum dikerjakan.
+26. **Anomali data halte** — seed `mock/data/stops.ts` dan
+    `mock/data/routes.ts` adalah milik pemilik proyek dan tidak menjadi target
+    penulisan. Perubahan editor hanya disimpan sebagai override pada
+    `src/mock/db.ts`; Reset Data Demo menghapus override dan mengembalikan seed.
+27. **Nama titik jemput** — seed menggunakan nama operasional baru: Titik Jemput
+    FEB, Pertanian, Rektorat, FMIPA, dan Terpadu. Titik Perpus, FK, dan Bundaran
+    dihapus sesuai keputusan pemilik proyek.
+28. **Panel Demo** — nomor plat bus demo dibuat deterministik berdasarkan jumlah
+    armada saat ini agar render React tetap murni; kontrol tetap dijalankan
+    melalui API.

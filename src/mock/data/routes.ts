@@ -13,7 +13,7 @@ import type { LatLng } from '@/lib/geo'
  * Urutan `stopIds` mengikuti arah putaran rute (dari barat/pertanian, searah jarum jam).
  */
 
-// Jalur Lingkar Luar (68 titik, ~2,54 km).
+// Jalur 1 (68 titik, ~2,54 km).
 const J1_PATH: LatLng[] = [
   [-5.3679483, 105.242119],
   [-5.3677246, 105.2422884],
@@ -84,7 +84,7 @@ const J1_PATH: LatLng[] = [
   [-5.3679483, 105.242119],
 ]
 
-// Jalur Lingkar Dalam (74 titik, ~1,82 km).
+// Jalur 2 (74 titik, ~1,82 km).
 const J2_PATH: LatLng[] = [
   [-5.3679481, 105.2421192],
   [-5.3678526, 105.2421792],
@@ -165,23 +165,23 @@ export const ROUTES: Route[] = [
   {
     id: 'J1',
     code: 'J1',
-    name: 'Jalur Lingkar Luar',
+    name: 'Jalur 1',
     color: '#1D4ED8',
     dashed: false,
     intervalMin: 8,
     path: J1_PATH,
-    stopIds: ['pertanian', 'gsg', 'rektorat', 'fk', 'mipa', 'bundaran'],
+    stopIds: ['titik-jemput-terpadu', 'pertanian', 'gsg', 'rektorat', 'mipa'],
     active: true,
   },
   {
     id: 'J2',
     code: 'J2',
-    name: 'Jalur Lingkar Dalam',
+    name: 'Jalur 2',
     color: '#0F9D8A',
     dashed: true,
     intervalMin: 6,
     path: J2_PATH,
-    stopIds: ['perpus', 'rektorat'],
+    stopIds: ['titik-jemput-terpadu', 'rektorat'],
     active: true,
   },
 ]
