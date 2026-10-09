@@ -7,12 +7,13 @@ import type {
   LoginInput,
   PinResetResult,
   Route,
+  RouteInput,
   Stop,
+  StopInput,
   TrackingLocationInput,
   User,
   UserInput,
 } from './types'
-import { ROUTES, STOPS } from '@/mock/data'
 import { simulator } from '@/mock/simulator/instance'
 import * as db from '@/mock/db'
 import { broadcastControl, publish } from '@/realtime'
@@ -21,10 +22,6 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
-}
-
-function clone<T extends object>(items: readonly T[]): T[] {
-  return items.map((item) => ({ ...item }))
 }
 
 function fakeJwt(payload: Record<string, string>): string {
@@ -62,12 +59,32 @@ export const api = {
 
   async getRoutes(): Promise<Route[]> {
     await delay(120)
-    return clone(ROUTES)
+    return db.listRoutes()
   },
 
   async getStops(): Promise<Stop[]> {
     await delay(120)
-    return clone(STOPS)
+    return db.listStops()
+  },
+
+  async saveRoute(id: string | null, input: RouteInput): Promise<Route> {
+    await delay(180)
+    const route = db.saveRoute(id, input)
+    publish('routes:changed', { routes: db.listRoutes(), stops: db.listStops() })
+    return route
+  },
+
+  async saveStop(id: string | null, input: StopInput): Promise<Stop> {
+    await delay(160)
+    const stop = db.saveStop(id, input)
+    publish('routes:changed', { routes: db.listRoutes(), stops: db.listStops() })
+    return stop
+  },
+
+  async deleteStop(id: string): Promise<void> {
+    await delay(140)
+    db.deleteStop(id)
+    publish('routes:changed', { routes: db.listRoutes(), stops: db.listStops() })
   },
 
   async getBuses(): Promise<Bus[]> {
@@ -178,6 +195,7 @@ export const api = {
     broadcastControl({ origin: CONTROL_ORIGIN, action: 'RESET', busId: '', ts: Date.now() })
     simulator.reset()
     publish('fleet:changed', { buses })
+    publish('routes:changed', { routes: db.listRoutes(), stops: db.listStops() })
   },
 
   getGatewayPositions(): BusPosition[] {

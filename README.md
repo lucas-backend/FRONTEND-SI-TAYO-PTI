@@ -4,7 +4,7 @@ Mockup frontend interaktif Sistem Pelacak Bus Universitas Lampung (web publik,
 web admin, simulator supir). Spesifikasi lengkap: `docs/BRIEF.md`. Acuan visual:
 `docs/design/`.
 
-Status saat ini: **Tahap 1–7 dan 8A** dari urutan BRIEF bagian 16 sudah selesai.
+Status saat ini: **Tahap 1–7, 8A, dan 8B** dari urutan BRIEF bagian 16 sudah selesai.
 
 | Tahap | Isi | Status |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Status saat ini: **Tahap 1–7 dan 8A** dari urutan BRIEF bagian 16 sudah selesa
 | 6 | Posisi pengguna + ETA personal (Lokasi Saya, Posisi Simulasi, bus tercepat, notifikasi mock) | Selesai |
 | 7 | Simulator supir (`/driver`), sinyal putus, mode demo satu tab (`/demo`) | Selesai |
 | 8A | Fondasi admin: auth + guard, layout, dashboard, monitor, CRUD armada & akun, persistensi demo | Selesai |
-| 8B | Editor rute & halte interaktif | Belum |
+| 8B | Editor rute & halte interaktif | Selesai |
 | 9 | Panel demo, tur, polesan responsif & mode gelap | Belum |
 | 10 | QA terhadap checklist, README | Belum |
 
@@ -39,8 +39,8 @@ Halaman publik:
 - `/demo` — **Mode Demo**: simulator supir di kiri + peta publik di kanan dalam satu tab.
 - `/dev` — Lab Pengembangan (token, komponen, monitor simulasi + Reset Data Demo).
 - `/admin/login` — Login admin (demo: `admin` / `admin123`).
-- `/admin/dashboard`, `/admin/monitor`, `/admin/armada`, `/admin/rute-halte`, `/admin/akun`
-  — Web Admin (dilindungi guard role ADMIN).
+- `/admin/dashboard`, `/admin/monitor`, `/admin/armada`, `/admin/rute`, `/admin/akun`
+  — Web Admin (dilindungi guard role ADMIN). `/admin/rute/:id` membuka editor peta.
 
 ## Teknologi
 
@@ -271,8 +271,8 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
 
 ## Asumsi
 
-1. **Tahap** — yang dikerjakan tahap 1–7 dan 8A (fondasi admin). Editor rute &
-   halte (8B), panel demo (9), dan QA (10) belum.
+1. **Tahap** — tahap 8B memakai editor Leaflet desktop responsif; panel demo (9)
+   dan QA penuh (10) belum dikerjakan.
 2. **Koordinat** — titik halte asli diverifikasi lewat OpenStreetMap/Nominatim, lalu
    **diproyeksikan ke garis rute** (`turf.nearestPointOnLine`) sehingga marker halte
    tepat di atas rute. Jarak koreksi > 25 m dilaporkan di `mock/data/stops.ts`
@@ -288,9 +288,10 @@ ETA ke tiap halte terisi berurutan. Tab *Simulasi* di `/dev` juga mencetak
    Perintah supir (`bus:control`) disiarkan agar tab leader ikut menerapkan.
 6. **Posisi penggerak** — pada mode mock posisi bus digerakkan mesin simulasi, bukan
    GPS asli; endpoint `/tracking/location` hanya mengembalikan posisi saat ini.
-7. **Penyimpanan** — hasil CRUD admin (bus, akun, PIN) dipersistensi pada satu
-   key `localStorage` ber-versi `bus-unila:demo-data:v1` (`src/mock/db.ts`); tombol
-   Reset Data Demo menghapus key tersebut dan kembali ke seed. Sesi login supir
+7. **Penyimpanan** — hasil CRUD admin (bus, akun, PIN, rute, dan halte) dipersistensi
+   pada satu key `localStorage` ber-versi `bus-unila:demo-data:v1` (`src/mock/db.ts`);
+   data awal `mock/data/routes.ts` dan `mock/data/stops.ts` tidak pernah ditulis ulang.
+   Tombol Reset Data Demo menghapus key tersebut dan kembali ke seed. Sesi login supir
    dan admin disimpan di `localStorage` (key terpisah), sedangkan posisi pengguna,
    pengingat, jejak bus, aktivitas, dan latensi hanya di memori.
 8. **Gateway WebSocket** — `wsGateway` masih stub (throw) sampai backend tersedia.

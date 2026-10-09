@@ -1,7 +1,7 @@
 import { MAX_STEP_ELAPSED_S, SIM } from '@/config'
 import type { Bus, BusPosition, CapacityStatus, Route, Stop } from '@/api/types'
 import { BUSES, ROUTES, STOPS } from '@/mock/data'
-import { bearingAtDistance, normalizeDistance, pointAtDistance, projectStopsOnRoute, routeLengthKm } from '@/lib/geo'
+import { bearingAtDistance, distanceAlongRoute, normalizeDistance, pointAtDistance, projectStopsOnRoute, routeLengthKm } from '@/lib/geo'
 import type { LatLng } from '@/lib/geo'
 import { capacityEventFromBus } from '@/realtime/gateway'
 import { publish } from '@/realtime/mockGateway'
@@ -59,8 +59,8 @@ export class SimulationEngine {
   private speedMultiplier: number = SIM.DEFAULT_SPEED_MULTIPLIER
   private paused = false
   private readonly buses: Bus[]
-  private readonly routes: readonly Route[]
-  private readonly stops: readonly Stop[]
+  private routes: readonly Route[]
+  private stops: readonly Stop[]
   private readonly onVisibilityChange = () => {
     if (typeof document === 'undefined') return
     if (document.visibilityState === 'visible') this.tick()
@@ -106,6 +106,29 @@ export class SimulationEngine {
 
   getSpeedMultiplier(): number {
     return this.speedMultiplier
+  }
+
+  syncRoutes(routes: readonly Route[], stops: readonly Stop[]): void {
+    const previousPoints = new Map(this.runtimes.map((runtime) => [runtime.bus.id, pointAtDistance(runtime.path, runtime.distanceKm)]))
+    this.routes = routes
+    this.stops = stops
+    this.runtimes.forEach((runtime) => {
+      const nextRoute = routes.find((item) => item.id === runtime.bus.routeId)
+      if (!nextRoute) return
+      if (!nextRoute.active && runtime.active) {
+        runtime.active = false
+        publish('bus:stopped', { busId: runtime.bus.id, ts: Date.now() })
+      }
+      const projected = previousPoints.get(runtime.bus.id)
+      runtime.route = nextRoute
+      runtime.path = nextRoute.path
+      runtime.totalKm = routeLengthKm(nextRoute.path)
+      runtime.distanceKm = projected ? distanceAlongRoute(nextRoute.path, projected) : 0
+      runtime.stops = projectStopsOnRoute(nextRoute.path, stops.filter((stop) => nextRoute.stopIds.includes(stop.id)).map((stop) => ({ id: stop.id, point: [stop.lat, stop.lng] as LatLng }))).map((item) => {
+        const stop = stops.find((candidate) => candidate.id === item.stopId)
+        return { ...item, point: stop ? [stop.lat, stop.lng] as LatLng : pointAtDistance(nextRoute.path, item.distanceKm) }
+      })
+    })
   }
 
   setPaused(paused: boolean): void {

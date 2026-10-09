@@ -1,4 +1,4 @@
-import type { Bus, BusPosition, CapacityStatus, BusStatus } from '@/api/types'
+import type { Bus, BusPosition, CapacityStatus, BusStatus, Route, Stop } from '@/api/types'
 
 /** Nama kanal realtime, meniru channel WebSocket. */
 export type RealtimeChannel =
@@ -10,6 +10,7 @@ export type RealtimeChannel =
   | 'bus:control'
   | 'fleet:changed'
   | 'gateway:status'
+  | 'routes:changed'
 
 export interface BusCapacityEvent {
   busId: string
@@ -54,6 +55,11 @@ export interface GatewayStatusEvent {
   ts: number
 }
 
+export interface RoutesChangedEvent {
+  routes: Route[]
+  stops: Stop[]
+}
+
 /** Daftar armada berubah (CRUD admin). Dipancarkan ke semua tab. */
 export interface FleetChangedEvent {
   buses: Bus[]
@@ -68,6 +74,7 @@ export interface RealtimeEventMap {
   'bus:control': BusControlEvent
   'fleet:changed': FleetChangedEvent
   'gateway:status': GatewayStatusEvent
+  'routes:changed': RoutesChangedEvent
 }
 
 export type RealtimePayload<C extends RealtimeChannel> = RealtimeEventMap[C]

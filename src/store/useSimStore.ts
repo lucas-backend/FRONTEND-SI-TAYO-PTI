@@ -174,6 +174,9 @@ export const useSimStore = create<SimState>((set, get) => ({
       gateway.subscribe('fleet:changed', (event) => {
         set({ buses: event.buses })
       }),
+      gateway.subscribe('routes:changed', (event) => {
+        set({ routes: event.routes, stops: event.stops })
+      }),
       gateway.subscribe('gateway:status', (event) => {
         set({ connected: event.connected })
       }),

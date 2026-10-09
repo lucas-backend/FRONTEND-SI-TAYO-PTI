@@ -30,6 +30,24 @@ export interface Route {
   active: boolean
 }
 
+export interface RouteInput {
+  code: RouteCode
+  name: string
+  color: string
+  dashed: boolean
+  intervalMin: number
+  path: [number, number][]
+  stopIds: string[]
+  active: boolean
+}
+
+export interface StopInput {
+  name: string
+  lat: number
+  lng: number
+  routeIds: string[]
+}
+
 export interface Bus {
   id: string
   plate: string

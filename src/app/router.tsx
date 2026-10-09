@@ -12,7 +12,7 @@ import { RequireAdmin } from '@/features/admin/RequireAdmin'
 import { DashboardPage } from '@/features/admin/pages/DashboardPage'
 import { LiveMonitorPage } from '@/features/admin/pages/LiveMonitorPage'
 import { FleetPage as AdminFleetPage } from '@/features/admin/pages/FleetPage'
-import { RoutesStubPage } from '@/features/admin/pages/RoutesStubPage'
+import { RouteEditorPage, RoutesStubPage } from '@/features/admin/pages/RoutesStubPage'
 import { AccountsPage } from '@/features/admin/pages/AccountsPage'
 import { DevShowcase } from './pages/DevShowcase'
 import { NotFound } from './pages/NotFound'
@@ -43,7 +43,10 @@ const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'monitor', element: <LiveMonitorPage /> },
       { path: 'armada', element: <AdminFleetPage /> },
+      { path: 'rute', element: <RoutesStubPage /> },
+      { path: 'rute/:id', element: <RouteEditorPage /> },
       { path: 'rute-halte', element: <RoutesStubPage /> },
+      { path: 'rute-halte/:id', element: <RouteEditorPage /> },
       { path: 'akun', element: <AccountsPage /> },
     ],
   },

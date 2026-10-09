@@ -1,5 +1,7 @@
-import type { Bus, BusInput, User, UserInput, UserRole } from '@/api/types'
+import type { Bus, BusInput, Route, RouteInput, Stop, StopInput, User, UserInput, UserRole } from '@/api/types'
 import { BUSES } from './data/buses'
+import { ROUTES } from './data/routes'
+import { STOPS } from './data/stops'
 import { DEMO_CREDENTIALS, USERS } from './data/users'
 
 /**
@@ -14,6 +16,8 @@ interface DemoData {
   buses: Bus[]
   users: User[]
   pins: Record<string, string>
+  routes: Route[]
+  stops: Stop[]
 }
 
 function clone<T extends object>(items: readonly T[]): T[] {
@@ -30,7 +34,7 @@ function seedPins(): Record<string, string> {
 }
 
 function seed(): DemoData {
-  return { buses: clone(BUSES), users: clone(USERS), pins: seedPins() }
+  return { buses: clone(BUSES), users: clone(USERS), pins: seedPins(), routes: structuredClone(ROUTES), stops: structuredClone(STOPS) }
 }
 
 function storageAvailable(): boolean {
@@ -44,7 +48,13 @@ function read(): DemoData | null {
   try {
     const parsed = JSON.parse(raw) as Partial<DemoData>
     if (!Array.isArray(parsed.buses) || !Array.isArray(parsed.users)) return null
-    return { buses: parsed.buses, users: parsed.users, pins: parsed.pins ?? seedPins() }
+    return {
+      buses: parsed.buses,
+      users: parsed.users,
+      pins: parsed.pins ?? seedPins(),
+      routes: Array.isArray(parsed.routes) ? parsed.routes : structuredClone(ROUTES),
+      stops: Array.isArray(parsed.stops) ? parsed.stops : structuredClone(STOPS),
+    }
   } catch {
     return null
   }
@@ -76,6 +86,38 @@ export function listBuses(): Bus[] {
 
 export function listUsers(): User[] {
   return clone(current().users)
+}
+
+export function listRoutes(): Route[] {
+  return structuredClone(current().routes)
+}
+
+export function listStops(): Stop[] {
+  return structuredClone(current().stops)
+}
+
+export function saveRoute(id: string | null, input: RouteInput): Route {
+  const data = current()
+  const route: Route = { ...input, id: id ?? `J${Date.now().toString(36)}` }
+  data.routes = id ? data.routes.map((item) => (item.id === id ? route : item)) : [...data.routes, route]
+  write(data)
+  return structuredClone(route)
+}
+
+export function saveStop(id: string | null, input: StopInput): Stop {
+  const data = current()
+  const stop: Stop = { ...input, id: id ?? `tj-${input.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now().toString(36)}` }
+  data.stops = id ? data.stops.map((item) => (item.id === id ? stop : item)) : [...data.stops, stop]
+  data.routes = data.routes.map((route) => route)
+  write(data)
+  return structuredClone(stop)
+}
+
+export function deleteStop(id: string): void {
+  const data = current()
+  data.stops = data.stops.filter((stop) => stop.id !== id)
+  data.routes = data.routes.map((route) => ({ ...route, stopIds: route.stopIds.filter((stopId) => stopId !== id) }))
+  write(data)
 }
 
 export function findUser(username: string): User | undefined {

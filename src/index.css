@@ -52,6 +52,26 @@ body {
   outline-offset: 2px;
 }
 
+.admin-route-pin,
+.admin-stop-pin {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 3px solid white;
+  border-radius: 999px;
+  box-shadow: 0 1px 5px rgb(18 20 31 / 35%);
+}
+
+.admin-route-pin {
+  background: #1d4ed8;
+}
+
+.admin-stop-pin {
+  width: 18px;
+  height: 18px;
+  background: #f59e0b;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

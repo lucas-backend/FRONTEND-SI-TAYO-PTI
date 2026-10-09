@@ -14,6 +14,7 @@ let isLeader = false
 let heartbeat: number | null = null
 let controlUnsub: (() => void) | null = null
 let fleetUnsub: (() => void) | null = null
+let routesUnsub: (() => void) | null = null
 
 function now(): number {
   return Date.now()
@@ -134,6 +135,9 @@ export function startSimulation(force = false): void {
   fleetUnsub = gateway.subscribe('fleet:changed', (event) => {
     simulator.syncFleet(event.buses)
   })
+  routesUnsub = gateway.subscribe('routes:changed', (event) => {
+    simulator.syncRoutes(event.routes, event.stops)
+  })
   startHeartbeat()
 }
 
@@ -143,6 +147,8 @@ export function stopSimulation(): void {
   controlUnsub = null
   fleetUnsub?.()
   fleetUnsub = null
+  routesUnsub?.()
+  routesUnsub = null
   // Lepas kepemimpinan agar tab lain bisa mengambil alih dan agar efek
   // StrictMode (mount-unmount-mount) dapat mengklaim ulang pada mount berikutnya.
   releaseLeadership()
