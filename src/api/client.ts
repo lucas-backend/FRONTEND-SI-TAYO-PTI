@@ -4,6 +4,7 @@ import type {
   BusInput,
   BusPosition,
   CapacityStatus,
+  DemoUserLocationInput,
   LoginInput,
   PinResetResult,
   Route,
@@ -189,10 +190,30 @@ export const api = {
     simulator.simulateSignalLoss(busId, seconds)
   },
 
+  async setSimulationSpeed(speed: 1 | 2 | 5): Promise<void> {
+    simulator.setSpeedMultiplier(speed)
+    broadcastControl({ origin: CONTROL_ORIGIN, action: 'SPEED', busId: '', speed, ts: Date.now() })
+  },
+
+  async setSimulationPaused(paused: boolean): Promise<void> {
+    simulator.setPaused(paused)
+    broadcastControl({ origin: CONTROL_ORIGIN, action: 'PAUSE', busId: '', paused, ts: Date.now() })
+  },
+
+  async simulateGeofenceExit(busId: string, seconds?: number): Promise<void> {
+    simulator.simulateGeofenceExit(busId, seconds)
+    broadcastControl({ origin: CONTROL_ORIGIN, action: 'GEOFENCE', busId, seconds, ts: Date.now() })
+  },
+
+  async setDemoUserLocation(input: DemoUserLocationInput): Promise<void> {
+    publish('demo:user-location', { ...input, ts: Date.now() })
+  },
+
   async resetDemo(): Promise<void> {
     await delay(160)
     const { buses } = db.resetDemoData()
     broadcastControl({ origin: CONTROL_ORIGIN, action: 'RESET', busId: '', ts: Date.now() })
+    simulator.syncRoutes(db.listRoutes(), db.listStops())
     simulator.reset()
     publish('fleet:changed', { buses })
     publish('routes:changed', { routes: db.listRoutes(), stops: db.listStops() })

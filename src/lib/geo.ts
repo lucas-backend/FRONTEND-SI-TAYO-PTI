@@ -56,6 +56,13 @@ export function distanceKm(from: LatLng, to: LatLng): number {
   return distance(toTurfPoint(from), toTurfPoint(to), { units: 'kilometers' })
 }
 
+export function snapPointToPath(path: readonly LatLng[], target: LatLng): { point: LatLng; correctionM: number } {
+  if (path.length < 2) return { point: target, correctionM: 0 }
+  const near = nearestPointOnLine(buildLine(path), toTurfPoint(target), { units: 'meters' })
+  const snapped = toLatLng(near.geometry.coordinates as [number, number])
+  return { point: snapped, correctionM: distanceMeters(target, snapped) }
+}
+
 /** Titik pada polyline sejauh `km` dari awal (loop dimodulo). */
 export function pointAtDistance(path: readonly LatLng[], km: number): LatLng {
   const line = buildLine(path)

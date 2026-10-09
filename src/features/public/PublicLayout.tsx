@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { PublicHeader } from './components/PublicHeader'
 import { BottomNav } from './components/BottomNav'
+import { DemoPanel } from '@/features/demo/DemoPanel'
 
 export function PublicLayout() {
   return (
@@ -10,6 +11,7 @@ export function PublicLayout() {
         <Outlet />
       </main>
       <BottomNav />
+      <DemoPanel />
     </div>
   )
 }

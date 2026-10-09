@@ -91,7 +91,7 @@ export function SchedulePage() {
                   stop.id === activeStopId ? 'bg-primary text-white' : 'bg-surface text-muted shadow-[var(--shadow-soft)] hover:text-ink',
                 )}
               >
-                {stop.name.replace('Halte ', '')}
+                {stop.name.replace('Halte ', '').replace(/\bMIPA\b/g, 'FMIPA')}
               </button>
             ))}
           </div>

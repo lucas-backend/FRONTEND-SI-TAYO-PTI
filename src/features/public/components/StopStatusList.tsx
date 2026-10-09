@@ -46,7 +46,7 @@ export function StopStatusList({ items, stopMap, targetStopId, onSelectStop }: S
                 aria-hidden
               />
               <span className={cn('flex-1 text-sm text-ink', item.state === 'NEXT' && 'font-bold')}>
-                {stop.name}
+                {stop.name.replace(/\bMIPA\b/g, 'FMIPA')}
               </span>
               <span
                 className={cn(

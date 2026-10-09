@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { MapContainer, Marker, Polyline, TileLayer, useMapEvents } from 'react-leaflet'
 import * as L from 'leaflet'
-import { feature, lineString, nearestPointOnLine } from '@turf/turf'
-import { z } from 'zod'
 import { ChevronLeft, Download, Edit3, GripVertical, MapPin, Plus, Redo2, Save, Trash2, Undo2, Upload } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button, Card, Chip, Toggle, useToast } from '@/components/ui'
@@ -10,14 +8,8 @@ import { api } from '@/api/client'
 import type { Route, Stop } from '@/api/types'
 import { useRoutes, useStops } from '@/hooks/useSimulation'
 import { MAP_CONFIG } from '@/config'
-import { routeLengthKm, distanceMeters, toLngLat, toLatLng } from '@/lib/geo'
-
-const routeSchema = z.object({
-  name: z.string().trim().min(1, 'Nama rute wajib diisi'),
-  intervalMin: z.number().min(1, 'Interval minimal 1 menit').max(60, 'Interval maksimal 60 menit'),
-  path: z.array(z.tuple([z.number(), z.number()])).min(2, 'Rute membutuhkan minimal 2 titik'),
-  stopIds: z.array(z.string()).min(2, 'Rute membutuhkan minimal 2 halte'),
-})
+import { routeLengthKm, distanceMeters, toLngLat, snapPointToPath, distanceAlongRoute } from '@/lib/geo'
+import { routeSchema } from '@/features/admin/routeValidation'
 
 function pointIcon(kind: 'route' | 'stop' = 'route') {
   return L.divIcon({
@@ -33,11 +25,18 @@ function MapClick({ onClick }: { onClick: (point: [number, number]) => void }) {
   return null
 }
 
-function snapToPath(path: [number, number][], target: [number, number]): { point: [number, number]; correctionM: number } {
-  const line = lineString(path.map(toLngLat))
-  const snapped = nearestPointOnLine(line, feature({ type: 'Point', coordinates: toLngLat(target) }), { units: 'meters' })
-  return { point: toLatLng(snapped.geometry.coordinates as [number, number]), correctionM: distanceMeters(target, toLatLng(snapped.geometry.coordinates as [number, number])) }
+function MapBridge({ mapRef }: { mapRef: MutableRefObject<L.Map | null> }) {
+  const map = useMapEvents({})
+  useEffect(() => {
+    mapRef.current = map
+    return () => {
+      mapRef.current = null
+    }
+  }, [map, mapRef])
+  return null
 }
+
+const snapToPath = snapPointToPath
 
 function insertOnPath(path: [number, number][], target: [number, number]): [number, number][] {
   if (path.length < 2) return [...path, target]
@@ -97,6 +96,11 @@ export function RouteEditorPage() {
   return <RouteEditor route={route} isNew={isNew} />
 }
 
+export default function RoutePages() {
+  const { id } = useParams()
+  return id ? <RouteEditorPage /> : <RoutesStubPage />
+}
+
 function RouteEditor({ route, isNew }: { route: Route; isNew: boolean }) {
   const navigate = useNavigate()
   const { show } = useToast()
@@ -115,6 +119,7 @@ function RouteEditor({ route, isNew }: { route: Route; isNew: boolean }) {
   const [dirty, setDirty] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+  const mapRef = useRef<L.Map | null>(null)
   const routeLength = useMemo(() => routeLengthKm(path), [path])
   const loopClosed = path.length > 1 && path[path.length - 1][0] === path[0][0] && path[path.length - 1][1] === path[0][1]
   const stopSource = draftStops.length > 0 ? draftStops : allStops
@@ -150,9 +155,10 @@ function RouteEditor({ route, isNew }: { route: Route; isNew: boolean }) {
   const exportGeoJson = () => { const blob = new Blob([JSON.stringify({ type: 'Feature', properties: { name }, geometry: { type: 'LineString', coordinates: path.map(toLngLat) } }, null, 2)], { type: 'application/geo+json' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${name.toLowerCase().replace(/\s+/g, '-') || 'rute'}.geojson`; anchor.click(); URL.revokeObjectURL(url) }
   const reorder = (from: number, to: number) => { const next = [...stopIds]; const [item] = next.splice(from, 1); next.splice(to, 0, item); setStopIds(next); setDirty(true) }
   const autoSort = () => setStopIds([...stopIds].sort((a, b) => { const sa = draftStops.find((stop) => stop.id === a); const sb = draftStops.find((stop) => stop.id === b); if (!sa || !sb) return 0; return distanceAlong(path, [sa.lat, sa.lng]) - distanceAlong(path, [sb.lat, sb.lng]) }))
+  const stopCorrection = (stop: Stop) => path.length >= 2 ? distanceMeters([stop.lat, stop.lng], snapToPath(path, [stop.lat, stop.lng]).point) : 0
   return <div className="flex h-full min-h-0 flex-col bg-bg">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 md:px-6"><div className="flex items-center gap-3"><Button variant="ghost" size="sm" icon={<ChevronLeft className="h-4 w-4" />} onClick={() => navigate('/admin/rute-halte')}>Kembali</Button><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Editor rute</p><h1 className="font-extrabold text-ink">{name}</h1></div>{dirty && <Chip tone="warning">Belum disimpan</Chip>}</div><div className="flex gap-2"><Button variant="soft" size="sm" icon={<Upload className="h-4 w-4" />} onClick={() => fileRef.current?.click()}>Impor GeoJSON</Button><input ref={fileRef} className="hidden" type="file" accept=".geojson,.json,application/geo+json" onChange={(event) => { const file = event.target.files?.[0]; if (file) importGeoJson(file); event.target.value = '' }} /><Button variant="soft" size="sm" icon={<Download className="h-4 w-4" />} onClick={exportGeoJson}>Ekspor</Button><Button size="sm" icon={<Save className="h-4 w-4" />} onClick={() => void save()}>Simpan</Button></div></div>
-    <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_380px]"><div className="relative min-h-[420px]"><MapContainer center={[MAP_CONFIG.center[0], MAP_CONFIG.center[1]]} zoom={MAP_CONFIG.zoom} className="h-full w-full" zoomControl><TileLayer url={MAP_CONFIG.tileUrl} attribution={MAP_CONFIG.attribution} /><MapClick onClick={handleMapClick} /><Polyline positions={path} pathOptions={{ color, weight: 6, dashArray: dashed ? '10 12' : undefined, lineCap: 'round' }} eventHandlers={{ click: (event) => { L.DomEvent.stopPropagation(event.originalEvent); if (mode === 'route') changePath(insertOnPath(path, [event.latlng.lat, event.latlng.lng])) } }} />{path.map((point, index) => <Marker key={`${index}-${point[0]}-${point[1]}`} position={point} icon={pointIcon()} draggable eventHandlers={{ dragend: (event) => { const marker = event.target as L.Marker; const position = marker.getLatLng(); const next = [...path]; next[index] = [position.lat, position.lng]; changePath(next) }, contextmenu: () => changePath(path.filter((_, itemIndex) => itemIndex !== index)) }} />)}{currentStops.map((stop) => <Marker key={stop.id} position={[stop.lat, stop.lng]} icon={pointIcon('stop')} draggable eventHandlers={{ dragend: (event) => { const marker = event.target as L.Marker; const snapped = snapToPath(path, [marker.getLatLng().lat, marker.getLatLng().lng]); setDraftStops((items) => items.map((item) => item.id === stop.id ? { ...item, lat: snapped.point[0], lng: snapped.point[1] } : item)); setDirty(true) }, contextmenu: () => setStopIds((items) => items.filter((item) => item !== stop.id)) }} />)}</MapContainer><div className="absolute bottom-4 left-4 z-[1000] flex flex-wrap gap-2 rounded-2xl bg-surface/95 p-2 shadow-[var(--shadow-card)]"><Button size="sm" variant={mode === 'route' ? 'primary' : 'soft'} onClick={() => setMode('route')}>Gambar rute</Button><Button size="sm" variant={mode === 'stop' ? 'primary' : 'soft'} onClick={() => setMode('stop')} icon={<MapPin className="h-4 w-4" />}>Tambah halte</Button><Button size="sm" variant="soft" icon={<Undo2 className="h-4 w-4" />} aria-label="Undo" disabled={!history.length} onClick={() => { const previous = history[history.length - 1]; setHistory(history.slice(0, -1)); setFuture([path, ...future]); setPath(previous) }}>Undo</Button><Button size="sm" variant="soft" icon={<Redo2 className="h-4 w-4" />} aria-label="Redo" disabled={!future.length} onClick={() => { const next = future[0]; setFuture(future.slice(1)); setHistory([...history, path]); setPath(next) }}>Redo</Button></div></div>
+    <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_380px]"><div className="relative min-h-[420px]"><MapContainer center={[MAP_CONFIG.center[0], MAP_CONFIG.center[1]]} zoom={MAP_CONFIG.zoom} className="h-full w-full" zoomControl><TileLayer url={MAP_CONFIG.tileUrl} attribution={MAP_CONFIG.attribution} /><MapBridge mapRef={mapRef} /><MapClick onClick={handleMapClick} /><Polyline positions={path} pathOptions={{ color, weight: 6, dashArray: dashed ? '10 12' : undefined, lineCap: 'round' }} eventHandlers={{ click: (event) => { L.DomEvent.stopPropagation(event.originalEvent); if (mode === 'route') changePath(insertOnPath(path, [event.latlng.lat, event.latlng.lng])) } }} />{path.map((point, index) => <Marker key={`${index}-${point[0]}-${point[1]}`} position={point} icon={pointIcon()} draggable eventHandlers={{ dragend: (event) => { const marker = event.target as L.Marker; const position = marker.getLatLng(); const next = [...path]; next[index] = [position.lat, position.lng]; changePath(next) }, contextmenu: () => changePath(path.filter((_, itemIndex) => itemIndex !== index)) }} />)}{currentStops.map((stop) => <Marker key={stop.id} position={[stop.lat, stop.lng]} icon={pointIcon('stop')} draggable eventHandlers={{ dragend: (event) => { const marker = event.target as L.Marker; const snapped = snapToPath(path, [marker.getLatLng().lat, marker.getLatLng().lng]); setDraftStops((items) => items.map((item) => item.id === stop.id ? { ...item, lat: snapped.point[0], lng: snapped.point[1] } : item)); setDirty(true) }, contextmenu: () => setStopIds((items) => items.filter((item) => item !== stop.id)) }} />)}</MapContainer><div className="absolute bottom-4 left-4 z-[1000] flex flex-wrap gap-2 rounded-2xl bg-surface/95 p-2 shadow-[var(--shadow-card)]"><Button size="sm" variant={mode === 'route' ? 'primary' : 'soft'} onClick={() => setMode('route')}>Gambar rute</Button><Button size="sm" variant={mode === 'stop' ? 'primary' : 'soft'} onClick={() => setMode('stop')} icon={<MapPin className="h-4 w-4" />}>Tambah halte</Button><Button size="sm" variant="soft" icon={<Undo2 className="h-4 w-4" />} aria-label="Undo" disabled={!history.length} onClick={() => { const previous = history[history.length - 1]; setHistory(history.slice(0, -1)); setFuture([path, ...future]); setPath(previous) }}>Undo</Button><Button size="sm" variant="soft" icon={<Redo2 className="h-4 w-4" />} aria-label="Redo" disabled={!future.length} onClick={() => { const next = future[0]; setFuture(future.slice(1)); setHistory([...history, path]); setPath(next) }}>Redo</Button></div></div>
       <aside className="min-h-0 overflow-y-auto border-l border-line bg-surface p-5">
         <div className="space-y-5">
           <section className="space-y-4">
@@ -175,13 +181,11 @@ function RouteEditor({ route, isNew }: { route: Route; isNew: boolean }) {
             <p className="text-xs text-muted">Status: {loopClosed ? 'loop tertutup' : 'terbuka'}</p>
             <Button fullWidth variant="soft" onClick={() => { const snapped = path.map((point) => snapToPath(path, point).point); setPath(snapped); setDirty(true) }}>Pasang ke jalan</Button>
           </section>
-        <section><div className="flex items-center justify-between"><h2 className="font-extrabold text-ink">Halte di rute ({currentStops.length})</h2><Button size="sm" variant="ghost" onClick={autoSort}>Urutkan otomatis</Button></div><div className="mt-3 space-y-2">{currentStops.map((stop, index) => <div key={stop.id} className="flex items-center gap-2 rounded-xl border border-line bg-bg p-2"><GripVertical className="h-4 w-4 shrink-0 text-muted" aria-hidden /><input aria-label={`Nama halte ${index + 1}`} className="min-w-0 flex-1 bg-transparent px-1 text-sm font-semibold text-ink outline-none" value={stop.name} onChange={(event) => { setDraftStops((items) => items.map((item) => item.id === stop.id ? { ...item, name: event.target.value } : item)); setDirty(true) }} onKeyDown={(event) => { if (event.key === 'ArrowUp' && index > 0) reorder(index, index - 1); if (event.key === 'ArrowDown' && index < currentStops.length - 1) reorder(index, index + 1) }} /><button className="rounded-lg p-2 text-muted hover:bg-danger-soft hover:text-danger" aria-label={`Hapus ${stop.name}`} onClick={() => setStopIds((items) => items.filter((item) => item !== stop.id))}><Trash2 className="h-4 w-4" /></button></div>)}</div></section>
+        <section><div className="flex items-center justify-between"><h2 className="font-extrabold text-ink">Halte di rute ({currentStops.length})</h2><Button size="sm" variant="ghost" onClick={autoSort}>Urutkan otomatis</Button></div><div className="mt-3 space-y-2">{currentStops.map((stop, index) => { const correction = stopCorrection(stop); return <div key={stop.id} className="flex items-center gap-2 rounded-xl border border-line bg-bg p-2"><GripVertical className="h-4 w-4 shrink-0 text-muted" aria-hidden /><button className="min-w-0 flex-1 text-left" onClick={() => mapRef.current?.flyTo([stop.lat, stop.lng], 17)}><input aria-label={`Nama halte ${index + 1}`} className="w-full bg-transparent px-1 text-sm font-semibold text-ink outline-none" value={stop.name} onChange={(event) => { setDraftStops((items) => items.map((item) => item.id === stop.id ? { ...item, name: event.target.value } : item)); setDirty(true) }} onKeyDown={(event) => { if (event.key === 'ArrowUp' && index > 0) reorder(index, index - 1); if (event.key === 'ArrowDown' && index < currentStops.length - 1) reorder(index, index + 1) }} /></button><span className={correction > 25 ? 'text-xs font-bold text-warning' : 'text-xs text-muted'}>{correction.toFixed(0)} m{correction > 25 ? ' · jauh dari rute' : ''}</span><button className="rounded-lg p-2 text-muted hover:bg-danger-soft hover:text-danger" aria-label={`Hapus ${stop.name}`} onClick={() => setStopIds((items) => items.filter((item) => item !== stop.id))}><Trash2 className="h-4 w-4" /></button></div> })}</div></section>
         {errors.length > 0 && <div className="rounded-xl bg-danger-soft p-3 text-sm text-danger"><strong className="block">Periksa sebelum menyimpan</strong><ul className="mt-1 list-disc pl-5">{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}</div></aside></div>
   </div>
 }
 
 function distanceAlong(path: [number, number][], target: [number, number]): number {
-  if (path.length < 2) return 0
-  const result = nearestPointOnLine(lineString(path.map(toLngLat)), feature({ type: 'Point', coordinates: toLngLat(target) }), { units: 'kilometers' })
-  return Number(result.properties.location ?? 0)
+  return distanceAlongRoute(path, target)
 }

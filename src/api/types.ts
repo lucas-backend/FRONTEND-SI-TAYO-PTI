@@ -122,6 +122,11 @@ export interface TrackingLocationInput {
   ts: number
 }
 
+export interface DemoUserLocationInput {
+  location: [number, number]
+  label: string
+}
+
 export interface LoginInput {
   username: string
   pin: string

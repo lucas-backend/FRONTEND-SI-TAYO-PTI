@@ -149,7 +149,7 @@ export class SimulationEngine {
     const routeCounts = new Map<string, number>()
     for (const bus of this.buses) {
       if (bus.active === false) continue
-      if (!this.routes.some((route) => route.id === bus.routeId)) continue
+      if (!this.routes.some((route) => route.id === bus.routeId && route.active)) continue
       routeCounts.set(bus.routeId, (routeCounts.get(bus.routeId) ?? 0) + 1)
     }
 
@@ -158,7 +158,7 @@ export class SimulationEngine {
     for (const bus of this.buses) {
       if (bus.active === false) continue
       const route = this.routes.find((item) => item.id === bus.routeId)
-      if (!route) continue
+      if (!route || !route.active) continue
       const index = indexByRoute.get(bus.routeId) ?? 0
       indexByRoute.set(bus.routeId, index + 1)
       const count = routeCounts.get(bus.routeId) ?? 1
@@ -418,7 +418,7 @@ export class SimulationEngine {
     return runtime?.queued.length ?? 0
   }
 
-  simulateGeofenceExit(busId: string, seconds = SIM.OFFLINE_SECONDS): void {
+  simulateGeofenceExit(busId: string, seconds: number = SIM.OFFLINE_SECONDS): void {
     const runtime = this.runtimes.find((item) => item.bus.id === busId)
     if (!runtime) return
     runtime.geofenceExitUntilTs = Date.now() + seconds * 1000

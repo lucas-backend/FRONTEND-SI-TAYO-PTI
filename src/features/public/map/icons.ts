@@ -14,7 +14,7 @@ export function buildBusMarkerHtml(bus: Bus, color: string, selected: boolean): 
 
 /** HTML marker halte: lingkaran + label. */
 export function buildStopIconHtml(name: string, isNext: boolean): string {
-  return `<div class="stop-wrap${isNext ? ' is-next' : ''}"><span class="stop-dot"></span><span class="stop-label">${name}</span></div>`
+  return `<div class="stop-wrap${isNext ? ' is-next' : ''}"><span class="stop-dot"></span><span class="stop-label">${displayStopName(name)}</span></div>`
 }
 
 /** HTML pin posisi pengguna (biru, dapat diseret pada mode simulasi). */
@@ -24,3 +24,4 @@ export function buildUserPinHtml(draggable: boolean): string {
     <span class="user-dot"></span>
   </div>`
 }
+import { displayStopName } from '@/lib/displayNames'

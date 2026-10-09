@@ -11,6 +11,7 @@ export type RealtimeChannel =
   | 'fleet:changed'
   | 'gateway:status'
   | 'routes:changed'
+  | 'demo:user-location'
 
 export interface BusCapacityEvent {
   busId: string
@@ -18,6 +19,12 @@ export interface BusCapacityEvent {
   seatsTaken: number
   capacity: number
   status: BusStatus
+}
+
+export interface DemoUserLocationEvent {
+  location: [number, number]
+  label: string
+  ts: number
 }
 
 export interface BusLifecycleEvent {
@@ -38,7 +45,7 @@ export interface BusSignalEvent {
   ts: number
 }
 
-export type BusControlAction = 'START' | 'STOP' | 'CAPACITY' | 'SIGNAL_LOSS' | 'RESET'
+export type BusControlAction = 'START' | 'STOP' | 'CAPACITY' | 'SIGNAL_LOSS' | 'RESET' | 'SPEED' | 'PAUSE' | 'GEOFENCE'
 
 /** Perintah kontrol dari simulator supir yang disiarkan ke tab leader. */
 export interface BusControlEvent {
@@ -47,6 +54,8 @@ export interface BusControlEvent {
   busId: string
   full?: boolean
   seconds?: number
+  speed?: 1 | 2 | 5
+  paused?: boolean
   ts: number
 }
 
@@ -75,6 +84,7 @@ export interface RealtimeEventMap {
   'fleet:changed': FleetChangedEvent
   'gateway:status': GatewayStatusEvent
   'routes:changed': RoutesChangedEvent
+  'demo:user-location': DemoUserLocationEvent
 }
 
 export type RealtimePayload<C extends RealtimeChannel> = RealtimeEventMap[C]

@@ -1,6 +1,6 @@
 import type { Bus } from '@/api/types'
 
-/** Armada dummy. Bus 01 & 02 aktif bergerak, Bus 03 standby untuk demo admin. */
+/** Armada dummy. Bus 01 standby sampai pengemudi mulai tracking; Bus 02 aktif. */
 export const BUSES: Bus[] = [
   {
     id: 'bus-01',
@@ -11,7 +11,7 @@ export const BUSES: Bus[] = [
     capacity: 28,
     seatsTaken: 14,
     capacityStatus: 'AVAILABLE',
-    status: 'ACTIVE',
+    status: 'STANDBY',
     active: true,
   },
   {

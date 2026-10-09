@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { Polyline } from 'react-leaflet'
+import { Fragment, memo } from 'react'
+import { CircleMarker, Polyline, Tooltip } from 'react-leaflet'
 import { useRoutes } from '@/hooks/useSimulation'
 
 interface RouteLayerProps {
@@ -10,13 +10,14 @@ interface RouteLayerProps {
 /** Layer rute statis. Dipisah dari layer bus agar tidak ikut render tiap tick. */
 export const RouteLayer = memo(function RouteLayer({ activeRouteId }: RouteLayerProps) {
   const routes = useRoutes()
+  const debug = new URLSearchParams(window.location.search).get('debug') === '1'
   return (
     <>
       {routes.map((route) => {
         const active = activeRouteId === null || route.id === activeRouteId
         return (
+          <Fragment key={route.id}>
           <Polyline
-            key={route.id}
             positions={route.path}
             pathOptions={{
               color: route.color,
@@ -27,6 +28,12 @@ export const RouteLayer = memo(function RouteLayer({ activeRouteId }: RouteLayer
               lineJoin: 'round',
             }}
           />
+          {debug && route.path.map((point, index) => (
+              <CircleMarker key={`${route.id}-debug-${index}`} center={point} radius={3} pathOptions={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.9 }}>
+                <Tooltip>{route.code} titik mentah #{index + 1} · jarak ke garis 0 m</Tooltip>
+              </CircleMarker>
+            ))}
+          </Fragment>
         )
       })}
     </>

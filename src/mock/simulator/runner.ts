@@ -91,6 +91,15 @@ function applyControl(event: BusControlEvent): void {
     case 'SIGNAL_LOSS':
       simulator.simulateSignalLoss(event.busId, event.seconds)
       break
+    case 'SPEED':
+      if (event.speed) simulator.setSpeedMultiplier(event.speed)
+      break
+    case 'PAUSE':
+      simulator.setPaused(Boolean(event.paused))
+      break
+    case 'GEOFENCE':
+      simulator.simulateGeofenceExit(event.busId, event.seconds)
+      break
     case 'RESET':
       simulator.reset()
       break

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AdminSidebar } from './components/AdminSidebar'
 import { AdminTopbar } from './components/AdminTopbar'
+import { DemoPanel } from '@/features/demo/DemoPanel'
 
 export function AdminLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -31,6 +32,7 @@ export function AdminLayout() {
         <main className="relative min-h-0 flex-1 overflow-hidden">
           <Outlet />
         </main>
+        <DemoPanel />
       </div>
     </div>
   )

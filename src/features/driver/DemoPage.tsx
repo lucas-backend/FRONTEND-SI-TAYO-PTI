@@ -1,6 +1,7 @@
 import { PhoneFrame } from './PhoneFrame'
 import { DriverSimulator } from './DriverSimulator'
 import { PublicMapPage } from '@/features/public/pages/PublicMapPage'
+import { DemoPanel } from '@/features/demo/DemoPanel'
 
 /**
  * Route /demo: simulator supir di kiri dan peta publik di kanan DALAM SATU TAB.
@@ -17,6 +18,7 @@ export function DemoPage() {
       <div className="relative min-w-0 flex-1 overflow-hidden">
         <PublicMapPage />
       </div>
+      <DemoPanel />
     </div>
   )
 }

@@ -95,7 +95,7 @@ export function BusDetailContent({
                   aria-hidden
                 />
                 <div className="flex items-center justify-between gap-3">
-                  <span className={cn('text-sm text-ink', item.state === 'NEXT' && 'font-bold')}>{stop.name}</span>
+                  <span className={cn('text-sm text-ink', item.state === 'NEXT' && 'font-bold')}>{stop.name.replace(/\bMIPA\b/g, 'FMIPA')}</span>
                   <span
                     className={cn(
                       'text-[11px] font-bold uppercase tracking-[0.04em]',
