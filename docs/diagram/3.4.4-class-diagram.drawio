@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="3.4.4 Class Diagram" id="class-344">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="980" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="clsUser" value="User" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="60" width="240" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="userAttr" value="- id: String&#xa;- username: String&#xa;- pinHash: String&#xa;- role: Role&#xa;- aktif: boolean" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsUser">
+          <mxGeometry x="0" y="28" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="userSep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;" vertex="1" parent="clsUser">
+          <mxGeometry x="0" y="132" width="240" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="userMeth" value="+ login(): Token&#xa;+ logout(): void" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsUser">
+          <mxGeometry x="0" y="140" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsBus" value="Bus (Armada)" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="440" y="60" width="250" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="busAttr" value="- id: String&#xa;- nama: String&#xa;- platNomor: String&#xa;- kapasitas: int&#xa;- statusKapasitas: StatusKapasitas&#xa;- ruteId: String&#xa;- driverId: String&#xa;- aktif: boolean" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsBus">
+          <mxGeometry x="0" y="28" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="busSep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;" vertex="1" parent="clsBus">
+          <mxGeometry x="0" y="182" width="250" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="busMeth" value="+ ubahStatus(s: StatusKapasitas): void" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsBus">
+          <mxGeometry x="0" y="190" width="250" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsStatus" value="&#171;enumeration&#187;&#xa;StatusKapasitas" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="820" y="60" width="240" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="statusAttr" value="TERSEDIA&#xa;PENUH" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsStatus">
+          <mxGeometry x="0" y="42" width="240" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsRute" value="Rute" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="240" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="ruteAttr" value="- id: String&#xa;- nama: String&#xa;- warna: String&#xa;- geometri: Koordinat[]&#xa;- aktif: boolean" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsRute">
+          <mxGeometry x="0" y="28" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ruteSep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;" vertex="1" parent="clsRute">
+          <mxGeometry x="0" y="132" width="240" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="ruteMeth" value="+ tambahHalte(h: Halte): void&#xa;+ hapusHalte(id: String): void" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsRute">
+          <mxGeometry x="0" y="140" width="240" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsLokasi" value="LokasiBus" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="440" y="420" width="250" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="lokasiAttr" value="- id: String&#xa;- busId: String&#xa;- latitude: double&#xa;- longitude: double&#xa;- heading: double&#xa;- kecepatan: double&#xa;- waktu: DateTime" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsLokasi">
+          <mxGeometry x="0" y="28" width="250" height="155" as="geometry" />
+        </mxCell>
+
+        <mxCell id="clsHalte" value="Halte (Titik Jemput)" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="760" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="halteAttr" value="- id: String&#xa;- nama: String&#xa;- koordinat: Koordinat&#xa;- urutan: int&#xa;- ruteId: String" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fontSize=11;" vertex="1" parent="clsHalte">
+          <mxGeometry x="0" y="28" width="240" height="115" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r1" value="mengendarai&#xa;1 → 0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;exitX=1;exitY=0.4;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="clsUser" target="clsBus">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r2" value="memiliki&#xa;1 → 1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="clsBus" target="clsStatus">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r3" value="menghasilkan&#xa;1 → 0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;startArrow=diamondThin;startFill=1;startSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="clsBus" target="clsLokasi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r4" value="menempuh&#xa;0..* → 1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;exitX=0;exitY=0.6;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="clsBus" target="clsRute">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="210" />
+              <mxPoint x="370" y="463" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="r5" value="memiliki&#xa;1 → 1..*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;startArrow=diamondThin;startFill=1;startSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;" edge="1" parent="1" source="clsRute" target="clsHalte">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
